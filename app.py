@@ -383,12 +383,20 @@ def generate_pdf_card(record):
     logo_uri = get_asset_b64(LOGO_PATH)
     nysc_logo_uri = get_asset_b64(NYSC_LOGO_PATH)
 
+    rec_cat = record.get("category", "")
+    if rec_cat == "Intern":
+        dept_val = "INTERN"
+    elif rec_cat == "NYSC":
+        dept_val = "NYSC"
+    else:
+        dept_val = record.get("department", "Technical")
+
     context = {
         "org_name": "YOLA ELECTRICITY DISTRIBUTION CO.",
         "full_name": record["full_name"],
         "category": record["category"],
         "designation": record.get("designation", "Staff Member"),
-        "department": record.get("department", "Technical") if record.get("category") not in ["Intern", "NYSC"] else "N/A",
+        "department": dept_val,
         "region": record.get("region", "Adamawa"),
         "emp_id": record["emp_id"],
         "logo_path": logo_uri,
@@ -416,13 +424,21 @@ def generate_id_request_form_pdf(record):
     now_dt = datetime.now()
     exp_dt = now_dt + timedelta(days=7)
 
+    rec_cat = record.get("category", "")
+    if rec_cat == "Intern":
+        dept_val = "INTERN"
+    elif rec_cat == "NYSC":
+        dept_val = "NYSC"
+    else:
+        dept_val = record.get("department", "TECHNICAL")
+
     context = {
         "logo_path": logo_uri,
         "photo_path": get_asset_b64(record["photo_path"]),
         "signature_path": get_asset_b64(record["signature_path"]),
         "full_name": record["full_name"],
         "emp_id": record["emp_id"],
-        "department": record.get("department", "TECHNICAL") if record.get("category") not in ["Intern", "NYSC"] else "N/A",
+        "department": dept_val,
         "region": record.get("region", "ADAMAWA"),
         "category": record["category"],
         "designation": record.get("designation", "Staff Member"),
@@ -1126,7 +1142,7 @@ if selected_page == "📊 Dashboard":
                 {
                     "Employee ID": r["emp_id"],
                     "Full Name": r["full_name"],
-                    "Department": r.get("department", "Technical") if r.get("category") not in ["Intern", "NYSC"] else "N/A",
+                    "Department": "INTERN" if r.get("category") == "Intern" else ("NYSC" if r.get("category") == "NYSC" else r.get("department", "Technical")),
                     "Role / Designation": r.get("designation", "Staff Member"),
                     "Category": r["category"],
                     "Region": r.get("region", "Adamawa"),
@@ -1154,7 +1170,6 @@ elif selected_page == "📝 Staff Register":
         # Category Selection outside/top of form for 100% reactive Department behavior
         reg_cat_key = f"inp_cat_{f_cnt}"
         category = st.selectbox("Staff Category *", ["Permanent", "Contract", "Intern", "NYSC"], key=reg_cat_key)
-        is_temp_category = category in ["Intern", "NYSC"]
 
         with st.form(f"staff_capture_form_{f_cnt}", clear_on_submit=True):
             f_col1, f_col2 = st.columns(2)
@@ -1166,9 +1181,12 @@ elif selected_page == "📝 Staff Register":
                 desig_input = st.text_input("Role / Designation *", value="", placeholder="e.g. Linesman", key=f"inp_desig_{f_cnt}").strip()
                 designation = desig_input if desig_input else "Staff Member"
 
-                if is_temp_category:
-                    st.text_input("Department", value="N/A", disabled=True, help="Department is set to N/A for Interns and NYSC members", key=f"inp_dept_dis_{f_cnt}")
-                    dept_input = "N/A"
+                if category == "Intern":
+                    st.text_input("Department", value="INTERN", disabled=True, key=f"inp_dept_dis_{f_cnt}")
+                    dept_input = "INTERN"
+                elif category == "NYSC":
+                    st.text_input("Department", value="NYSC", disabled=True, key=f"inp_dept_dis_{f_cnt}")
+                    dept_input = "NYSC"
                 else:
                     dept_input = st.selectbox("Department *", DEPARTMENTS, key=f"inp_dept_{f_cnt}")
 
@@ -1238,8 +1256,14 @@ elif selected_page == "📝 Staff Register":
             disp_name = full_name if full_name else "FULL NAME"
             disp_id = emp_id if emp_id else "YEDC-0000"
             disp_desig = designation if designation else "Role / Designation"
-            disp_dept = "N/A" if is_temp_category else (dept_input if dept_input else "Technical")
             disp_cat = category if category else "Permanent"
+            if disp_cat == "Intern":
+                disp_dept = "INTERN"
+            elif disp_cat == "NYSC":
+                disp_dept = "NYSC"
+            else:
+                disp_dept = dept_input if dept_input else "Technical"
+
             disp_reg = staff_region
 
         photo_render = f'<img src="{preview_photo_b64}" class="preview-photo">' if preview_photo_b64 else '<div class="preview-photo" style="display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:11px;">[Staff Photo]</div>'
@@ -1270,7 +1294,13 @@ elif selected_page == "📝 Staff Register":
         """, unsafe_allow_html=True)
 
     if submit_btn:
-        final_dept = "N/A" if is_temp_category else dept_input
+        if category == "Intern":
+            final_dept = "INTERN"
+        elif category == "NYSC":
+            final_dept = "NYSC"
+        else:
+            final_dept = dept_input
+
         if not emp_id:
             st.error("Please enter Employee ID.")
         elif not full_name:
@@ -1420,7 +1450,7 @@ elif selected_page == "⚙️ Batch Processing" and user_role in ["super_admin",
                 {
                     "Employee ID": r["emp_id"],
                     "Full Name": r["full_name"],
-                    "Department": r.get("department", "Technical") if r.get("category") not in ["Intern", "NYSC"] else "N/A",
+                    "Department": "INTERN" if r.get("category") == "Intern" else ("NYSC" if r.get("category") == "NYSC" else r.get("department", "Technical")),
                     "Role / Designation": r.get("designation", "Staff"),
                     "Category": r["category"],
                     "Region": r.get("region", "Adamawa"),
@@ -1536,9 +1566,12 @@ elif selected_page == "🔍 Staff Directory" and user_role in ["super_admin", "r
                 with e_c2:
                     e_desig = st.text_input("Role / Designation *", value=target_staff.get("designation", "Staff Member"), placeholder="e.g. Linesman").strip()
                     
-                    if e_cat in ["Intern", "NYSC"]:
-                        st.text_input("Department", value="N/A", disabled=True, key=f"edit_dept_dis_{target_staff['emp_id']}")
-                        e_dept = "N/A"
+                    if e_cat == "Intern":
+                        st.text_input("Department", value="INTERN", disabled=True, key=f"edit_dept_dis_{target_staff['emp_id']}")
+                        e_dept = "INTERN"
+                    elif e_cat == "NYSC":
+                        st.text_input("Department", value="NYSC", disabled=True, key=f"edit_dept_dis_{target_staff['emp_id']}")
+                        e_dept = "NYSC"
                     else:
                         dept_idx = DEPARTMENTS.index(target_staff.get("department", "Technical")) if target_staff.get("department", "Technical") in DEPARTMENTS else 0
                         e_dept = st.selectbox("Department *", DEPARTMENTS, index=dept_idx)
@@ -1573,12 +1606,14 @@ elif selected_page == "🔍 Staff Directory" and user_role in ["super_admin", "r
                                 opt_p.save(p_abs, format="JPEG", quality=95, optimize=True)
                                 updated_photo_rel = f"photos/{p_fname}"
 
+                            final_edit_dept = "INTERN" if e_cat == "Intern" else ("NYSC" if e_cat == "NYSC" else e_dept)
+
                             ok, u_msg = update_staff_record(
                                 emp_id=target_staff["emp_id"],
                                 full_name=e_name,
                                 category=e_cat,
                                 designation=e_desig if e_desig else "Staff Member",
-                                department=e_dept if e_cat not in ["Intern", "NYSC"] else "N/A",
+                                department=final_edit_dept,
                                 region=e_region,
                                 photo_path=updated_photo_rel
                             )
@@ -1609,7 +1644,8 @@ elif selected_page == "🔍 Staff Directory" and user_role in ["super_admin", "r
         st.caption(f"Showing {len(filtered_staff)} of {len(all_staff)} record(s)")
 
         for staff in filtered_staff:
-            with st.expander(f"🪪 **{staff['emp_id']}** - {staff['full_name']} (Dept: {staff.get('department', 'Technical') if staff.get('category') not in ['Intern', 'NYSC'] else 'N/A'} - {staff['category']} - {staff.get('region', 'Adamawa')})"):
+            display_dept_label = "INTERN" if staff.get('category') == 'Intern' else ("NYSC" if staff.get('category') == 'NYSC' else staff.get('department', 'Technical'))
+            with st.expander(f"🪪 **{staff['emp_id']}** - {staff['full_name']} (Dept: {display_dept_label} - {staff['category']} - {staff.get('region', 'Adamawa')})"):
                 c1, c2, c3, c4 = st.columns([1, 1, 1, 1.2])
 
                 photo_abs = BASE_DIR / staff["photo_path"]
