@@ -887,8 +887,8 @@ if not st.session_state.authenticated:
 
         with st.form("login_form"):
             st.markdown("##### 🔐 System Login")
-            u_name = st.text_input("Username", placeholder="e.g. admin, adamawa_admin, or adamawa_assistant").strip()
-            u_pass = st.text_input("Password", type="password", placeholder="••••••••").strip()
+            u_name = st.text_input("Username", placeholder="e.g. admin").strip()
+            u_pass = st.text_input("Password", type="password", placeholder="Enter password").strip()
             
             login_submit = st.form_submit_button("🔑 Login to Portal", type="primary", use_container_width=True)
 
@@ -909,10 +909,10 @@ if not st.session_state.authenticated:
 
         st.markdown("<br>", unsafe_allow_html=True)
         st.info("""
-        💡 **Official YEDC Operational Regions & Test Accounts:**
-        - **Super Admin (All 4 Regions):** Username: `admin` | Password: `admin123`
-        - **Regional Admins:** `adamawa_admin`, `borno_admin`, `taraba_admin`, `yobe_admin` | Password: `<region>123`
-        - **Enrollment Assistants (Dashboard & Register Only):** `adamawa_assistant`, `borno_assistant`, `taraba_assistant`, `yobe_assistant` | Password: `assist123`
+        💡 **Quick Test Credentials:**
+        - **Super Admin:** Username `admin` | Password `admin123`
+        - **Regional Admin:** Username `adamawa_admin` | Password `adamawa123`
+        - **Enrollment Assistant:** Username `adamawa_assistant` | Password `assist123`
         """)
     st.stop()
 
