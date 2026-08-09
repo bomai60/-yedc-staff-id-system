@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>YEDC Staff ID Card - {{ emp_id }}</title>
+    <style>
+        @page {
+            size: 54mm 86mm;
+            margin: 0;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            width: 54mm;
+            height: 86mm;
+            background-color: #ffffff;
+            color: #0f172a;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        /* Card Header with YEDC Branding */
+        .card-header {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #ffffff;
+            text-align: center;
+            padding: 3mm 2mm 2.5mm 2mm;
+            border-bottom: 1.5mm solid #ff6d00; /* YEDC Brand Orange */
+        }
+        .logo-container {
+            margin-bottom: 1mm;
+        }
+        .org-logo {
+            max-height: 7.5mm;
+            max-width: 32mm;
+            object-fit: contain;
+        }
+        .org-title {
+            font-size: 6pt;
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            color: #ffffff;
+            text-transform: uppercase;
+        }
+        .org-subtitle {
+            font-size: 4pt;
+            letter-spacing: 0.5px;
+            color: #ff6d00;
+            font-weight: 700;
+            margin-top: 0.5px;
+            text-transform: uppercase;
+        }
+
+        /* Main Content Body */
+        .card-body {
+            padding: 2.5mm 3mm 1.5mm 3mm;
+            text-align: center;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Staff Photo Box */
+        .photo-wrapper {
+            width: 25mm;
+            height: 32mm;
+            border-radius: 3px;
+            overflow: hidden;
+            border: 1.5px solid #0f172a;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+            background-color: #f8fafc;
+            margin-bottom: 1.5mm;
+        }
+        .staff-photo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        /* Staff Info Elements */
+        .staff-name {
+            font-size: 8.5pt;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.1;
+            margin-bottom: 1mm;
+            max-width: 48mm;
+            word-wrap: break-word;
+            text-transform: uppercase;
+        }
+        .designation {
+            font-size: 5.5pt;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 1mm;
+            max-width: 48mm;
+        }
+        .emp-id-badge {
+            display: inline-block;
+            font-size: 6.5pt;
+            font-weight: 800;
+            color: #ffffff;
+            background-color: #ff6d00; /* YEDC Orange */
+            padding: 0.6mm 2.5mm;
+            border-radius: 3px;
+            letter-spacing: 0.5px;
+            margin-bottom: 1mm;
+        }
+        .category-tag {
+            font-size: 5pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 0.4mm 2mm;
+            border-radius: 2px;
+            color: #0f172a;
+            background-color: #e2e8f0;
+            border: 0.5px solid #cbd5e1;
+            display: inline-flex;
+            align-items: center;
+            gap: 1mm;
+        }
+        .nysc-badge-img {
+            height: 3.5mm;
+            width: auto;
+            object-fit: contain;
+        }
+
+        /* Footer Assets Section (Signature & QR) */
+        .card-footer {
+            background-color: #f8fafc;
+            border-top: 0.5px solid #e2e8f0;
+            padding: 1.5mm 3mm 2mm 3mm;
+            height: 16.5mm;
+        }
+        .footer-table {
+            width: 100%;
+            height: 100%;
+            border-collapse: collapse;
+        }
+        .footer-table td {
+            vertical-align: middle;
+            text-align: center;
+        }
+        .sig-col {
+            width: 62%;
+            padding-right: 1mm;
+        }
+        .qr-col {
+            width: 38%;
+            text-align: right;
+        }
+        .sig-img {
+            max-width: 26mm;
+            max-height: 8.5mm;
+            object-fit: contain;
+            display: block;
+            margin: 0 auto;
+        }
+        .sig-label {
+            font-size: 3.8pt;
+            color: #64748b;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-top: 0.5mm;
+        }
+        .qr-img {
+            width: 11.5mm;
+            height: 11.5mm;
+            object-fit: contain;
+            display: inline-block;
+        }
+
+        /* Bottom Accent Strip */
+        .bottom-strip {
+            height: 1.5mm;
+            background: linear-gradient(90deg, #ff6d00 0%, #0f172a 100%);
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <!-- YEDC Header -->
+    <div class="card-header">
+        {% if logo_path %}
+        <div class="logo-container">
+            <img src="{{ logo_path }}" class="org-logo" alt="YEDC Logo">
+        </div>
+        {% endif %}
+        <div class="org-title">{{ org_name }}</div>
+        <div class="org-subtitle">Official Identity Card</div>
+    </div>
+
+    <!-- Body -->
+    <div class="card-body">
+        <div class="photo-wrapper">
+            <img src="{{ photo_path }}" class="staff-photo" alt="Staff Photo">
+        </div>
+        <div class="staff-name">{{ full_name }}</div>
+        {% if designation %}
+        <div class="designation">{{ designation }}</div>
+        {% endif %}
+        <div class="emp-id-badge">ID: {{ emp_id }}</div>
+        <div>
+            <span class="category-tag">
+                {% if category == "NYSC" and nysc_logo_path %}
+                <img src="{{ nysc_logo_path }}" class="nysc-badge-img" alt="NYSC Logo">
+                {% endif %}
+                {{ category }}
+            </span>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="card-footer">
+        <table class="footer-table">
+            <tr>
+                <td class="sig-col">
+                    <img src="{{ signature_path }}" class="sig-img" alt="Signature">
+                    <div class="sig-label">Authorized Signature</div>
+                </td>
+                <td class="qr-col">
+                    <img src="{{ qr_path }}" class="qr-img" alt="QR Code">
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Accent Strip -->
+    <div class="bottom-strip"></div>
+</body>
+</html>

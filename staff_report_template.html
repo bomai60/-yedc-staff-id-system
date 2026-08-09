@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>YEDC Staff Master Directory Report</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 12mm;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            color: #0f172a;
+            background: #ffffff;
+            font-size: 10pt;
+            padding: 10px;
+        }
+        .header-table {
+            width: 100%;
+            border-bottom: 3px solid #ff6b00;
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+        }
+        .logo-img {
+            max-height: 48px;
+        }
+        .org-name {
+            font-size: 16pt;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.1;
+        }
+        .doc-title {
+            font-size: 10.5pt;
+            font-weight: 700;
+            color: #ff6b00;
+            text-transform: uppercase;
+            margin-top: 3px;
+        }
+        .meta-box {
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 9pt;
+        }
+        .meta-table {
+            width: 100%;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 5px;
+        }
+        .data-table th {
+            background: #0f172a;
+            color: #ffffff;
+            padding: 8px 10px;
+            font-size: 8.5pt;
+            text-align: left;
+            text-transform: uppercase;
+        }
+        .data-table td {
+            padding: 7px 10px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 9pt;
+            vertical-align: middle;
+        }
+        .data-table tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        .photo-thumb {
+            width: 28px;
+            height: 36px;
+            object-fit: cover;
+            border-radius: 3px;
+            border: 1px solid #0f172a;
+        }
+        .badge {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 7.5pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+        .badge-perm { background: #fff3eb; color: #ff6b00; border: 1px solid #ffccaa; }
+        .badge-contract { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+        .badge-intern { background: #f3e8ff; color: #7c3aed; border: 1px solid #ddd6fe; }
+        .badge-nysc { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+        .footer {
+            margin-top: 25px;
+            border-top: 1px solid #cbd5e1;
+            padding-top: 6px;
+            font-size: 8pt;
+            color: #64748b;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <table class="header-table">
+        <tr>
+            <td style="width: 70%;">
+                <div class="org-name">YOLA ELECTRICITY DISTRIBUTION CO.</div>
+                <div class="doc-title">Registered Staff Master Directory Report</div>
+            </td>
+            <td style="text-align: right; vertical-align: middle;">
+                {% if logo_path %}
+                <img src="{{ logo_path }}" class="logo-img" alt="YEDC Logo">
+                {% endif %}
+            </td>
+        </tr>
+    </table>
+
+    <div class="meta-box">
+        <table class="meta-table">
+            <tr>
+                <td><b>Region Scope:</b> {{ region_filter }}</td>
+                <td><b>Total Staff Records:</b> {{ total_count }}</td>
+                <td style="text-align: right;"><b>Generated On:</b> {{ generated_at }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Photo</th>
+                <th>Employee ID</th>
+                <th>Full Name</th>
+                <th>Designation</th>
+                <th>Category</th>
+                <th>Region</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in records %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>
+                    {% if r.photo_uri %}
+                    <img src="{{ r.photo_uri }}" class="photo-thumb" alt="Photo">
+                    {% else %}
+                    -
+                    {% endif %}
+                </td>
+                <td><b>{{ r.emp_id }}</b></td>
+                <td>{{ r.full_name }}</td>
+                <td>{{ r.designation }}</td>
+                <td>
+                    <span class="badge {% if r.category == 'Permanent' %}badge-perm{% elif r.category == 'Contract' %}badge-contract{% elif r.category == 'Intern' %}badge-intern{% else %}badge-nysc{% endif %}">
+                        {{ r.category }}
+                    </span>
+                </td>
+                <td>{{ r.region }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="footer">
+        Confidential — Yola Electricity Distribution Company (YEDC) Staff Identity Management Portal
+    </div>
+</body>
+</html>

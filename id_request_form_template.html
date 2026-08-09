@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>YEDC Identity Card Request Form - {{ emp_id }}</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 12mm 15mm;
+        }
+        * {
+            box-sizing: border-box;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #0f172a;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background: #ffffff;
+            font-size: 10.5pt;
+            padding: 5px;
+        }
+        .header-table {
+            width: 100%;
+            border-bottom: 1.5px solid #334155;
+            padding-bottom: 8px;
+            margin-bottom: 22px;
+        }
+        .logo-img {
+            max-height: 50px;
+            width: auto;
+        }
+        .header-title-main {
+            font-size: 13pt;
+            font-weight: bold;
+            color: #334155;
+            text-align: right;
+            margin-bottom: 4px;
+        }
+        .header-title-sub {
+            font-size: 12pt;
+            font-weight: bold;
+            color: #0f172a;
+            text-align: right;
+        }
+
+        .photo-container {
+            margin-bottom: 22px;
+            margin-left: 2px;
+        }
+        .photo-img {
+            width: 120px;
+            height: 150px;
+            object-fit: cover;
+            border: 1px solid #475569;
+        }
+
+        .field-row {
+            margin-bottom: 22px;
+            font-size: 11pt;
+            line-height: 1.4;
+        }
+        .field-label {
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: inline-block;
+            min-width: 150px;
+        }
+        .dots-line {
+            display: inline-block;
+            border-bottom: 1.5px dotted #334155;
+            padding-bottom: 2px;
+            padding-left: 8px;
+            padding-right: 8px;
+            font-weight: bold;
+            font-size: 11.5pt;
+            color: #0f172a;
+            text-transform: uppercase;
+        }
+
+        .purpose-box {
+            margin-top: 25px;
+            margin-bottom: 22px;
+            font-size: 10.5pt;
+        }
+        .purpose-option {
+            display: inline-block;
+            margin-right: 32px;
+            font-weight: bold;
+        }
+        .checkbox-sq {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 1.5px solid #0f172a;
+            margin-right: 6px;
+            vertical-align: middle;
+            text-align: center;
+            line-height: 12px;
+            font-size: 10px;
+        }
+        .checkbox-sq.checked {
+            background: #0f172a;
+            color: #ffffff;
+        }
+
+        .signature-section {
+            margin-top: 30px;
+        }
+        .sig-container {
+            display: inline-block;
+            vertical-align: bottom;
+            border-bottom: 1.5px dotted #334155;
+            min-width: 280px;
+            min-height: 28px;
+            padding-left: 8px;
+        }
+        .sig-img {
+            max-height: 28px;
+            max-width: 150px;
+            display: block;
+            margin-bottom: -1px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Section matching YEDC Document -->
+    <table class="header-table">
+        <tr>
+            <td style="width: 40%; vertical-align: middle;">
+                {% if logo_path %}
+                <img src="{{ logo_path }}" class="logo-img" alt="YEDC Logo">
+                {% else %}
+                <div style="font-weight: bold; font-size: 16pt;">YEDC</div>
+                {% endif %}
+            </td>
+            <td style="width: 60%; vertical-align: middle;">
+                <div class="header-title-main">Human Resource Management</div>
+                <div class="header-title-sub">Identity Card Request Form</div>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Staff Photo -->
+    <div class="photo-container">
+        {% if photo_path %}
+        <img src="{{ photo_path }}" class="photo-img" alt="Staff Photo">
+        {% else %}
+        <div class="photo-img" style="display:flex;align-items:center;justify-content:center;color:#94a3b8;">[PASSPORT PHOTO]</div>
+        {% endif %}
+    </div>
+
+    <!-- Staff Details Form Fields -->
+    <div class="field-row">
+        <span class="field-label">STAFF NAME:</span>
+        <span class="dots-line" style="min-width: 420px;">{{ full_name }}</span>
+    </div>
+
+    <div class="field-row">
+        <span class="field-label">STAFF NUMBER:</span>
+        <span style="font-weight: bold;">(</span>
+        <span class="dots-line" style="min-width: 240px;">{{ emp_id }}</span>
+        <span style="font-weight: bold;">)</span>
+    </div>
+
+    <div class="field-row">
+        <span class="field-label">DEPARTMENT:</span>
+        <span class="dots-line" style="min-width: 420px;">{{ department }}</span>
+    </div>
+
+    <div class="field-row">
+        <span class="field-label">Role:</span>
+        <span class="dots-line" style="min-width: 470px;">{{ designation }}</span>
+    </div>
+
+    <!-- Purpose of Request -->
+    <div class="purpose-box">
+        <span class="field-label" style="min-width: 180px;">PURPOSE OF REQUEST:</span>
+        <span class="purpose-option">
+            <span class="checkbox-sq checked">✓</span> New Employee
+        </span>
+        <span class="purpose-option">
+            <span class="checkbox-sq"></span> Not received
+        </span>
+        <span class="purpose-option">
+            <span class="checkbox-sq"></span> Lost/Stolen
+        </span>
+    </div>
+
+    <!-- Dates -->
+    <div class="field-row">
+        <span class="field-label">DATE OF REQUEST:</span>
+        <span class="dots-line" style="min-width: 420px;">{{ date_of_request }}</span>
+    </div>
+
+    <div class="field-row">
+        <span class="field-label">EXPECTED DATE:</span>
+        <span class="dots-line" style="min-width: 420px;">{{ expected_date }}</span>
+    </div>
+
+    <!-- Signatures -->
+    <div class="signature-section">
+        <div class="field-row" style="margin-bottom: 22px;">
+            <span class="field-label" style="vertical-align: bottom;">STAFF SIGN:</span>
+            <div class="sig-container">
+                {% if signature_path %}
+                <img src="{{ signature_path }}" class="sig-img" alt="Staff Signature">
+                {% else %}
+                <span style="color:#64748b; font-weight:normal;">............................................................</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="field-row">
+            <span class="field-label" style="vertical-align: bottom;">HR OFFICER SIGN:</span>
+            <div class="sig-container">
+                <span style="font-family: 'Brush Script MT', cursive, sans-serif; font-size: 13pt; color: #1e3a8a; font-weight: bold; line-height: 28px;">HR Approved / Verified</span>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
