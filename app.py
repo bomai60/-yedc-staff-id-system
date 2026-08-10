@@ -1896,10 +1896,10 @@ elif selected_page == "📈 Reports & Analytics" and user_role in ["super_admin"
                 # Dual-Engine PDF Master Report Export Button
                 ok_rep, pdf_rep_path = generate_staff_master_pdf_report(rep_records, region_filter=rep_region_filter)
                 if ok_rep and os.path.exists(pdf_rep_path):
-                    with open(pdf_rep_file, "rb") as pdf_rep_file:
+                    with open(pdf_rep_path, "rb") as f_pdf_rep:
                         st.download_button(
                             label="📄 Export PDF Report",
-                            data=pdf_rep_file,
+                            data=f_pdf_rep,
                             file_name=f"YEDC_Staff_Master_Report_{rep_region_filter}.pdf",
                             mime="application/pdf",
                             type="primary",
