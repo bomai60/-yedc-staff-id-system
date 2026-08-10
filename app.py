@@ -1235,15 +1235,19 @@ elif selected_page == "📝 Staff Register":
                 staff_region = user_region
                 st.text_input("Assigned Region", value=user_region, disabled=True, key=f"inp_reg_dis_{f_cnt}")
 
-            st.markdown("##### 📷 Staff Photo")
-            photo_upload_source = st.radio("Photo Input Mode:", ["File Upload", "Camera Capture"], horizontal=True, key=f"mode_photo_{f_cnt}")
+            st.markdown("##### 📷 Staff Photo Input")
+            st.caption("Choose Mobile Camera / Gallery Upload or Live Web Camera:")
 
-            photo_file = None
-            if photo_upload_source == "File Upload":
-                photo_file = st.file_uploader("Upload Staff Photo (Mobile Camera or Gallery) *", type=["jpg", "jpeg", "png", "heic", "heif"], key=f"uploader_photo_{f_cnt}")
-                st.caption("⚡ Ultra HD Optimization: Photos are automatically enhanced & saved at ~600 KB HD Print Quality (1200x1600 resolution).")
-            else:
-                photo_file = st.camera_input("Take Staff Photo *", key=f"cam_photo_{f_cnt}")
+            photo_tab1, photo_tab2 = st.tabs(["📁 Mobile Camera / Gallery Upload", "📷 Live Web Camera Capture"])
+
+            with photo_tab1:
+                uploaded_photo_file = st.file_uploader("Select Passport Photo or Take Photo with Mobile Camera *", type=["jpg", "jpeg", "png", "heic", "heif"], key=f"uploader_photo_{f_cnt}")
+                st.caption("📱 **Mobile Tip:** Tapping above on your phone lets you use your phone's camera app directly (Rear or Front camera)!")
+
+            with photo_tab2:
+                captured_photo_file = st.camera_input("Take Live Web Camera Photo *", key=f"cam_photo_{f_cnt}")
+
+            photo_file = uploaded_photo_file if uploaded_photo_file is not None else captured_photo_file
 
             if photo_file is not None:
                 st.caption(f"✓ Original file size: {photo_file.size / (1024*1024):.2f} MB (Optimizing to ~600 KB HD Output)")
