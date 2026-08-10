@@ -1351,7 +1351,7 @@ elif selected_page == "📝 Staff Register":
 
         if disp_cat == "Contract":
             st.markdown(f"""
-            <div style="width: 240px; height: 380px; background: #ffffff; border-radius: 12px; border: 2px solid #102a5c; box-shadow: 0 12px 30px rgba(0,0,0,0.12); overflow: hidden; margin: 0 auto; position: relative; font-family: Arial, sans-serif;">
+            <div style="width: 240px; height: 380px; background: #ffffff; border-radius: 14px; border: 2px solid #0c1a40; box-shadow: 0 12px 30px rgba(0,0,0,0.12); overflow: hidden; margin: 0 auto; position: relative; font-family: 'Plus Jakarta Sans', Arial, sans-serif;">
                 <!-- Top Red & Orange Stripes -->
                 <div style="position: absolute; top: 0; right: 0; width: 140px; height: 16px;">
                     <div style="position: absolute; top: 0; right: 0; width: 95px; height: 8px; background: #e52e04;"></div>
@@ -1359,86 +1359,86 @@ elif selected_page == "📝 Staff Register":
                 </div>
                 <!-- Header Logo & Title -->
                 <div style="padding: 12px 10px 4px 10px; display: flex; align-items: center; gap: 6px;">
-                    {f'<img src="{logo_b64}" style="max-height: 26px; width: auto;">' if logo_b64 else ''}
-                    <div style="font-size: 10px; font-weight: 800; color: #102a5c; line-height: 1.1;">Yola Electricity<br>Distribution Company</div>
+                    {f'<img src="{logo_b64}" style="max-height: 28px; width: auto;">' if logo_b64 else ''}
+                    <div style="font-size: 10px; font-weight: 800; color: #0c1a40; line-height: 1.1;">Yola Electricity<br>Distribution Company</div>
                 </div>
                 <!-- Photo Container -->
                 <div style="text-align: center; margin: 4px 0;">
-                    <div style="width: 105px; height: 125px; margin: 0 auto; border: 4px solid #e52e04; border-radius: 12px; background: #f8fafc; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                    <div style="width: 110px; height: 128px; margin: 0 auto; border: 4px solid #e52e04; border-radius: 12px; background: #f8fafc; overflow: hidden; display: flex; align-items: center; justify-content: center;">
                         {photo_render}
                     </div>
                 </div>
                 <!-- Staff Info -->
                 <div style="text-align: center; padding: 0 6px;">
-                    <div style="font-size: 12.5px; font-weight: 900; color: #102a5c; text-transform: uppercase;">{disp_name}</div>
-                    <div style="font-size: 10.5px; font-weight: 800; color: #102a5c; text-transform: uppercase; margin-top: 2px;">{disp_desig}</div>
+                    <div style="font-size: 13px; font-weight: 900; color: #0c1a40; text-transform: uppercase;">{disp_name}</div>
+                    <div style="font-size: 11px; font-weight: 800; color: #0c1a40; text-transform: uppercase; margin-top: 2px;">{disp_desig}</div>
                 </div>
-                <!-- ID & Signature Table -->
-                <table style="width: 90%; margin: 6px auto 2px auto; font-size: 10px; font-weight: bold; color: #102a5c;">
-                    <tr>
-                        <td style="width: 45%;">ID No</td>
-                        <td>: {disp_id}</td>
+                <!-- ID & Signature Table (NO BORDERS) -->
+                <table style="width: 88%; margin: 6px auto 2px auto; font-size: 11px; font-weight: bold; color: #0c1a40; border-collapse: collapse; border: none;">
+                    <tr style="border: none;">
+                        <td style="width: 46%; border: none; padding: 2px 0; font-weight: 800; text-align: left;">ID No</td>
+                        <td style="border: none; padding: 2px 0; font-weight: 800; text-align: left;">: {disp_id}</td>
                     </tr>
-                    <tr>
-                        <td>Holder's Sign</td>
-                        <td>{sig_render}</td>
+                    <tr style="border: none;">
+                        <td style="border: none; padding: 2px 0; font-weight: 800; text-align: left; vertical-align: middle;">Holder's<br>Sign</td>
+                        <td style="border: none; padding: 2px 0; text-align: left; vertical-align: middle;">{sig_render}</td>
                     </tr>
                 </table>
                 <!-- QR Code -->
                 <div style="text-align: center; margin-top: 2px;">
-                    <div style="display: inline-block; padding: 2px; border: 1px dashed #cbd5e1; border-radius: 3px; font-size: 7px; color: #64748b; font-weight: bold;">
-                        [ QR CODE ]
+                    <div style="display: inline-block; padding: 2px 5px; border: 1px dashed #cbd5e1; border-radius: 3px; font-size: 7.5px; color: #64748b; font-weight: bold;">
+                        ┌ &nbsp;&nbsp; 📷 QR &nbsp;&nbsp; ┐
                     </div>
                 </div>
                 <!-- Bottom Graphic Banner -->
                 <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: 16px;">
                     <div style="position: absolute; bottom: 8px; left: 0; width: 100px; height: 5px; background: #e52e04;"></div>
-                    <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: 8px; background: #102a5c;"></div>
+                    <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: 8px; background: #0c1a40;"></div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
         else:
             # Permanent Staff Template Preview
             st.markdown(f"""
-            <div style="width: 240px; height: 380px; background: #ffffff; border-radius: 12px; border: 2px solid #102a5c; box-shadow: 0 12px 30px rgba(0,0,0,0.12); overflow: hidden; margin: 0 auto; position: relative; font-family: Arial, sans-serif;">
+            <div style="width: 240px; height: 380px; background: #ffffff; border-radius: 14px; border: 2px solid #0c1a40; box-shadow: 0 12px 30px rgba(0,0,0,0.12); overflow: hidden; margin: 0 auto; position: relative; font-family: 'Plus Jakarta Sans', Arial, sans-serif;">
                 <!-- Top Curved Orange Accent -->
-                <div style="position: absolute; top: 0; right: 0; width: 95px; height: 32px; background: #f96302; border-bottom-left-radius: 32px;"></div>
+                <div style="position: absolute; top: 0; right: 0; width: 105px; height: 38px; background: linear-gradient(135deg, #ff5522, #f03a17); border-bottom-left-radius: 38px;"></div>
                 <!-- Header Logo & Title -->
                 <div style="padding: 12px 10px 4px 10px; display: flex; align-items: center; gap: 6px; position: relative; z-index: 2;">
-                    {f'<img src="{logo_b64}" style="max-height: 26px; width: auto;">' if logo_b64 else ''}
-                    <div style="font-size: 10px; font-weight: 800; color: #102a5c; line-height: 1.1;">Yola Electricity<br>Distribution Company</div>
+                    {f'<img src="{logo_b64}" style="max-height: 28px; width: auto;">' if logo_b64 else ''}
+                    <div style="font-size: 10px; font-weight: 800; color: #0c1a40; line-height: 1.1;">Yola Electricity<br>Distribution Company</div>
                 </div>
                 <!-- Photo Container -->
-                <div style="text-align: center; margin: 4px 0;">
-                    <div style="width: 105px; height: 125px; margin: 0 auto; border: 4px solid #1e4587; background: #f8fafc; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                <div style="text-align: center; margin: 4px 0; position: relative; z-index: 2;">
+                    <div style="width: 110px; height: 128px; margin: 0 auto; border: 4px solid #1a529e; background: #f8fafc; overflow: hidden; display: flex; align-items: center; justify-content: center;">
                         {photo_render}
                     </div>
                 </div>
                 <!-- Staff Info -->
-                <div style="text-align: center; padding: 0 6px;">
-                    <div style="font-size: 13px; font-weight: 900; color: #102a5c;">{disp_name}</div>
-                    <div style="background: #102a5c; color: white; font-size: 9px; font-weight: bold; padding: 3px 9px; border-radius: 12px; display: inline-block; margin: 3px 0 2px 0;">{disp_dept}</div>
+                <div style="text-align: center; padding: 0 6px; position: relative; z-index: 2;">
+                    <div style="font-size: 13.5px; font-weight: 900; color: #0c1a40;">{disp_name}</div>
+                    <div style="background: #0c1a40; color: white; font-size: 9.5px; font-weight: bold; padding: 3px 10px; border-radius: 12px; display: inline-block; margin: 3px 0 2px 0;">{disp_dept}</div>
                 </div>
-                <!-- ID & Signature Table -->
-                <table style="width: 90%; margin: 4px auto 2px auto; font-size: 10px; font-weight: bold; color: #102a5c;">
-                    <tr>
-                        <td style="width: 45%;">ID No</td>
-                        <td>: {disp_id}</td>
+                <!-- ID & Signature Table (NO BORDERS) -->
+                <table style="width: 88%; margin: 6px auto 2px auto; font-size: 11px; font-weight: bold; color: #0c1a40; border-collapse: collapse; border: none; position: relative; z-index: 2;">
+                    <tr style="border: none;">
+                        <td style="width: 46%; border: none; padding: 2px 0; font-weight: 800; text-align: left;">ID No</td>
+                        <td style="border: none; padding: 2px 0; font-weight: 800; text-align: left;">: {disp_id}</td>
                     </tr>
-                    <tr>
-                        <td>Holder's Sign</td>
-                        <td>{sig_render}</td>
+                    <tr style="border: none;">
+                        <td style="border: none; padding: 2px 0; font-weight: 800; text-align: left; vertical-align: middle;">Holder's<br>Sign</td>
+                        <td style="border: none; padding: 2px 0; text-align: left; vertical-align: middle;">{sig_render}</td>
                     </tr>
                 </table>
                 <!-- QR Code -->
-                <div style="text-align: center; margin-top: 2px;">
-                    <div style="display: inline-block; padding: 2px; border: 1px dashed #cbd5e1; border-radius: 3px; font-size: 7px; color: #64748b; font-weight: bold;">
-                        [ QR CODE ]
+                <div style="text-align: center; margin-top: 2px; position: relative; z-index: 2;">
+                    <div style="display: inline-block; padding: 2px 5px; border: 1px dashed #cbd5e1; border-radius: 3px; font-size: 7.5px; color: #64748b; font-weight: bold;">
+                        ┌ &nbsp;&nbsp; 📷 QR &nbsp;&nbsp; ┐
                     </div>
                 </div>
                 <!-- Bottom Graphic Accents -->
-                <div style="position: absolute; bottom: 0; left: 0; width: 65px; height: 26px; background: #f96302; border-top-right-radius: 26px;"></div>
-                <div style="position: absolute; bottom: 0; right: 0; width: 75px; height: 26px; background: #102a5c; border-top-left-radius: 26px;"></div>
+                <div style="position: absolute; bottom: 0; left: 0; width: 85px; height: 38px; background: linear-gradient(135deg, #ff5522, #f03a17); border-top-right-radius: 38px; z-index: 1;"></div>
+                <div style="position: absolute; bottom: 0; right: 0; width: 95px; height: 44px; background: #0c1a40; border-top-left-radius: 44px; z-index: 1;"></div>
             </div>
             """, unsafe_allow_html=True)
 

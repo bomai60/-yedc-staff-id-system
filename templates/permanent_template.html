@@ -15,7 +15,7 @@
             padding: 0;
             font-family: 'Helvetica', 'Arial', sans-serif;
             background-color: #ffffff;
-            color: #102a5c;
+            color: #0c1a40;
         }
         table {
             border-collapse: collapse;
@@ -35,22 +35,17 @@
 <body>
 
 <!-- ================= PAGE 1: FRONT ================= -->
-<table width="54mm" height="86mm" style="width: 54mm; height: 86mm; background-color: #ffffff;">
-    <!-- Top Orange Accent Bar -->
-    <tr>
-        <td height="4mm" style="background-color: #f96302; height: 4mm;"></td>
-    </tr>
-
+<table width="54mm" height="86mm" style="width: 54mm; height: 86mm; background-color: #ffffff; position: relative;">
     <!-- Header Logo & Title -->
     <tr>
-        <td style="padding: 2.5mm 2mm 1mm 2mm;">
+        <td style="padding: 3mm 2mm 1mm 2mm;" colspan="2">
             <table width="100%">
                 <tr>
-                    <td width="10mm" style="vertical-align: middle;">
-                        {% if logo_path %}<img src="{{ logo_path }}" width="10mm" style="max-height: 8mm;">{% endif %}
+                    <td width="11mm" style="vertical-align: middle;">
+                        {% if logo_path %}<img src="{{ logo_path }}" width="11mm" style="max-height: 9mm;">{% endif %}
                     </td>
                     <td style="vertical-align: middle; padding-left: 1.5mm;">
-                        <div style="font-size: 7.5pt; font-weight: bold; color: #102a5c; line-height: 1.1;">Yola Electricity<br>Distribution Company</div>
+                        <div style="font-size: 8.5pt; font-weight: 900; color: #0c1a40; line-height: 1.1;">Yola Electricity<br>Distribution Company</div>
                     </td>
                 </tr>
             </table>
@@ -59,11 +54,11 @@
 
     <!-- Photo Container -->
     <tr>
-        <td align="center" style="text-align: center; padding: 1mm 0;">
-            <table align="center" style="margin: 0 auto; border: 1.5mm solid #1e4587; background-color: #f8fafc;">
+        <td align="center" style="text-align: center; padding: 1.5mm 0 1mm 0;" colspan="2">
+            <table align="center" style="margin: 0 auto; border: 0.8mm solid #1a529e; background-color: #f8fafc;">
                 <tr>
                     <td>
-                        <img src="{{ photo_path }}" width="26mm" height="32mm" style="width: 26mm; height: 32mm;">
+                        <img src="{{ photo_path }}" width="28mm" height="32mm" style="width: 28mm; height: 32mm; display: block;">
                     </td>
                 </tr>
             </table>
@@ -72,28 +67,28 @@
 
     <!-- Staff Details -->
     <tr>
-        <td align="center" style="text-align: center; padding: 1mm 2mm 0mm 2mm;">
-            <div style="font-size: 10pt; font-weight: bold; color: #102a5c;">{{ full_name }}</div>
+        <td align="center" style="text-align: center; padding: 1mm 2mm 0mm 2mm;" colspan="2">
+            <div style="font-size: 11pt; font-weight: 900; color: #0c1a40;">{{ full_name }}</div>
             {% if department and department != "N/A" %}
-            <div style="background-color: #102a5c; color: #ffffff; font-size: 6.5pt; font-weight: bold; padding: 1.2mm 3.5mm; margin-top: 1mm; display: inline-block;">{{ department }}</div>
+            <div style="background-color: #0c1a40; color: #ffffff; font-size: 6.5pt; font-weight: bold; padding: 1.2mm 4mm; border-radius: 2mm; margin-top: 1mm; display: inline-block;">{{ department }}</div>
             {% else %}
-            <div style="background-color: #102a5c; color: #ffffff; font-size: 6.5pt; font-weight: bold; padding: 1.2mm 3.5mm; margin-top: 1mm; display: inline-block;">{{ designation }}</div>
+            <div style="background-color: #0c1a40; color: #ffffff; font-size: 6.5pt; font-weight: bold; padding: 1.2mm 4mm; border-radius: 2mm; margin-top: 1mm; display: inline-block;">{{ designation }}</div>
             {% endif %}
         </td>
     </tr>
 
-    <!-- ID & Signature Table -->
+    <!-- ID & Signature Table (No Borders!) -->
     <tr>
-        <td align="center" style="padding: 1.5mm 3mm;">
-            <table width="48mm" style="width: 48mm; margin: 0 auto;">
+        <td align="center" style="padding: 2mm 3mm 1mm 3mm;" colspan="2">
+            <table width="46mm" style="width: 46mm; margin: 0 auto;">
                 <tr>
-                    <td width="18mm" style="font-size: 7.5pt; font-weight: bold; color: #102a5c; text-align: left;">ID No</td>
-                    <td style="font-size: 7.5pt; font-weight: bold; color: #102a5c; text-align: left;">: {{ emp_id }}</td>
+                    <td width="20mm" style="font-size: 8pt; font-weight: 800; color: #0c1a40; text-align: left; border: none; padding-bottom: 1.5mm;">ID No</td>
+                    <td style="font-size: 8pt; font-weight: 800; color: #0c1a40; text-align: left; border: none; padding-bottom: 1.5mm;">: {{ emp_id }}</td>
                 </tr>
                 <tr>
-                    <td style="font-size: 7.5pt; font-weight: bold; color: #102a5c; text-align: left; padding-top: 1mm;">Holder's Sign</td>
-                    <td style="text-align: left; padding-top: 1mm;">
-                        <img src="{{ signature_path }}" height="6mm" style="max-height: 6mm; max-width: 22mm;">
+                    <td style="font-size: 8pt; font-weight: 800; color: #0c1a40; text-align: left; border: none; vertical-align: middle;">Holder's<br>Sign</td>
+                    <td style="text-align: left; border: none; vertical-align: middle;">
+                        <img src="{{ signature_path }}" height="7.5mm" style="max-height: 7.5mm; max-width: 24mm; display: inline-block;">
                     </td>
                 </tr>
             </table>
@@ -102,14 +97,20 @@
 
     <!-- QR Code -->
     <tr>
-        <td align="center" style="text-align: center; vertical-align: middle; padding-bottom: 2mm;">
-            <img src="{{ qr_path }}" width="13mm" height="13mm" style="width: 13mm; height: 13mm;">
+        <td align="center" style="text-align: center; vertical-align: middle; padding-bottom: 3mm;" colspan="2">
+            <table align="center" style="margin: 0 auto;">
+                <tr>
+                    <td align="center" style="border: 0.3mm solid #cbd5e1; padding: 1mm;">
+                        <img src="{{ qr_path }}" width="13.5mm" height="13.5mm" style="width: 13.5mm; height: 13.5mm; display: block;">
+                    </td>
+                </tr>
+            </table>
         </td>
     </tr>
 
-    <!-- Bottom Graphic Banner -->
+    <!-- Bottom Graphic Accents -->
     <tr>
-        <td height="3mm" style="background-color: #102a5c; height: 3mm;"></td>
+        <td height="3.5mm" style="background-color: #0c1a40; height: 3.5mm;" colspan="2"></td>
     </tr>
 </table>
 
@@ -119,45 +120,45 @@
 <table width="54mm" height="86mm" style="width: 54mm; height: 86mm; background-color: #ffffff;">
     <!-- Top Orange Accent Bar -->
     <tr>
-        <td height="4mm" style="background-color: #f96302; height: 4mm;"></td>
+        <td height="4mm" style="background-color: #ff5522; height: 4mm;" colspan="2"></td>
     </tr>
 
     <!-- Back Page Content -->
     <tr>
-        <td style="padding: 4mm 3mm 2mm 3mm; vertical-align: top;">
-            <div style="font-size: 8.5pt; font-weight: bold; color: #102a5c; line-height: 1.25; margin-bottom: 4mm;">
+        <td style="padding: 5mm 3.5mm 2mm 3.5mm; vertical-align: top;" colspan="2">
+            <div style="font-size: 9pt; font-weight: 900; color: #0c1a40; line-height: 1.25; margin-bottom: 5mm;">
                 This is to certify that the bearer whose name, photograph and signature appear overleaf is a staff of
             </div>
 
-            <table width="100%" style="margin-bottom: 4mm;">
+            <table width="100%" style="margin-bottom: 5mm;">
                 <tr>
-                    <td width="10mm" style="vertical-align: middle;">
-                        {% if logo_path %}<img src="{{ logo_path }}" width="10mm" style="max-height: 8mm;">{% endif %}
+                    <td width="11mm" style="vertical-align: middle;">
+                        {% if logo_path %}<img src="{{ logo_path }}" width="11mm" style="max-height: 9mm;">{% endif %}
                     </td>
                     <td style="vertical-align: middle; padding-left: 1.5mm;">
-                        <div style="font-size: 8.5pt; font-weight: bold; color: #102a5c; line-height: 1.1;">Yola Electricity<br>Distribution Company</div>
+                        <div style="font-size: 9pt; font-weight: 900; color: #0c1a40; line-height: 1.1;">Yola Electricity<br>Distribution Company</div>
                     </td>
                 </tr>
             </table>
 
-            <div style="font-size: 8.5pt; font-weight: bold; color: #102a5c; margin-bottom: 1mm;">If found, Please return to</div>
-            <div style="font-size: 8pt; color: #102a5c; line-height: 1.2; margin-bottom: 6mm;">
+            <div style="font-size: 9pt; font-weight: 900; color: #0c1a40; margin-bottom: 1.5mm;">If found, Please return to</div>
+            <div style="font-size: 8.5pt; color: #0c1a40; line-height: 1.25; margin-bottom: 7mm;">
                 2, Atiku Abubakar Road, Jimeta-Yola<br>
                 Adamawa State Nigeria
             </div>
 
             <!-- Authorised Signature Block -->
-            <table width="48mm" style="width: 48mm; margin: 0 auto; text-align: center;">
+            <table width="46mm" style="width: 46mm; margin: 0 auto; text-align: center;">
                 <tr>
                     <td align="center">
-                        {% if auth_sig_path %}<img src="{{ auth_sig_path }}" width="38mm" style="max-height: 10mm;">{% endif %}
+                        {% if auth_sig_path %}<img src="{{ auth_sig_path }}" width="40mm" style="max-height: 11mm;">{% endif %}
                     </td>
                 </tr>
                 <tr>
-                    <td height="0.5mm" style="background-color: #102a5c; height: 0.5mm;"></td>
+                    <td height="0.5mm" style="background-color: #0c1a40; height: 0.5mm;"></td>
                 </tr>
                 <tr>
-                    <td style="font-size: 7.5pt; font-weight: bold; color: #102a5c; padding-top: 1mm; text-transform: uppercase;">
+                    <td style="font-size: 8pt; font-weight: 900; color: #0c1a40; padding-top: 1.2mm; text-transform: uppercase;">
                         AUTHORISED SIGNATURE
                     </td>
                 </tr>
@@ -165,9 +166,9 @@
         </td>
     </tr>
 
-    <!-- Bottom Graphic Banner -->
+    <!-- Bottom Graphic Accent -->
     <tr>
-        <td height="3mm" style="background-color: #102a5c; height: 3mm;"></td>
+        <td height="3.5mm" style="background-color: #0c1a40; height: 3.5mm;" colspan="2"></td>
     </tr>
 </table>
 
