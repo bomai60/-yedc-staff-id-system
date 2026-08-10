@@ -1235,17 +1235,14 @@ elif selected_page == "📝 Staff Register":
                 staff_region = user_region
                 st.text_input("Assigned Region", value=user_region, disabled=True, key=f"inp_reg_dis_{f_cnt}")
 
-            st.markdown("##### 📷 Staff Photo Input")
-            st.caption("Choose Mobile Camera / Gallery Upload or Live Web Camera:")
+            st.markdown("##### 📷 Staff Photo")
+            st.caption("Upload passport photo file OR take photo directly using camera:")
 
-            photo_tab1, photo_tab2 = st.tabs(["📁 Mobile Camera / Gallery Upload", "📷 Live Web Camera Capture"])
-
-            with photo_tab1:
-                uploaded_photo_file = st.file_uploader("Select Passport Photo or Take Photo with Mobile Camera *", type=["jpg", "jpeg", "png", "heic", "heif"], key=f"uploader_photo_{f_cnt}")
-                st.caption("📱 **Mobile Tip:** Tapping above on your phone lets you use your phone's camera app directly (Rear or Front camera)!")
-
-            with photo_tab2:
-                captured_photo_file = st.camera_input("Take Live Web Camera Photo *", key=f"cam_photo_{f_cnt}")
+            p_col1, p_col2 = st.columns(2)
+            with p_col1:
+                uploaded_photo_file = st.file_uploader("Upload Passport Photo (JPG / PNG / HEIC) *", type=["jpg", "jpeg", "png", "heic", "heif"], key=f"uploader_photo_{f_cnt}")
+            with p_col2:
+                captured_photo_file = st.camera_input("Take Photo using Camera *", key=f"cam_photo_{f_cnt}")
 
             photo_file = uploaded_photo_file if uploaded_photo_file is not None else captured_photo_file
 
