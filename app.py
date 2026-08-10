@@ -1328,32 +1328,101 @@ elif selected_page == "📝 Staff Register":
 
             disp_reg = staff_region
 
-        photo_render = f'<img src="{preview_photo_b64}" class="preview-photo">' if preview_photo_b64 else '<div class="preview-photo" style="display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:11px;">[Staff Photo]</div>'
-        sig_render = f'<img src="{preview_sig_b64}" style="max-height:26px;max-width:60px;">' if preview_sig_b64 else '<div style="font-size:6.5px;color:#64748b;font-weight:700;text-transform:uppercase;">Authorized Signature</div>'
+        photo_render = f'<img src="{preview_photo_b64}" style="width: 100%; height: 100%; object-fit: cover;">' if preview_photo_b64 else '<div style="color:#94a3b8;font-size:11px;font-weight:bold;">[ Photo ]</div>'
+        sig_render = f'<img src="{preview_sig_b64}" style="max-height:22px;max-width:55px;vertical-align:middle;">' if preview_sig_b64 else '<span style="font-size:8px;color:#94a3b8;">[ Signature ]</span>'
 
-        cat_badge_html = f'<img src="{nysc_logo_b64}" style="height:12px;vertical-align:middle;margin-right:2px;"> NYSC' if (disp_cat == "NYSC" and nysc_logo_b64) else disp_cat
-
-        st.markdown(f"""
-        <div class="card-preview-container">
-            <div class="preview-header">
-                {f'<img src="{logo_b64}" style="max-height:18px;background:white;padding:1px 3px;border-radius:2px;">' if logo_b64 else ''}
-                <div style="font-size:7.5px;font-weight:800;letter-spacing:0.5px;margin-top:2px;color:white;">YOLA ELECTRICITY DIST. CO.</div>
-                <div style="font-size:5.5px;color:#ff6b00;font-weight:700;">DRAFT IDENTITY CARD ({disp_reg.upper()})</div>
+        if disp_cat == "Contract":
+            st.markdown(f"""
+            <div style="width: 240px; height: 380px; background: #ffffff; border-radius: 12px; border: 2px solid #102a5c; box-shadow: 0 12px 30px rgba(0,0,0,0.12); overflow: hidden; margin: 0 auto; position: relative; font-family: Arial, sans-serif;">
+                <!-- Top Red & Orange Stripes -->
+                <div style="position: absolute; top: 0; right: 0; width: 140px; height: 16px;">
+                    <div style="position: absolute; top: 0; right: 0; width: 95px; height: 8px; background: #e52e04;"></div>
+                    <div style="position: absolute; top: 9px; right: 0; width: 65px; height: 5px; background: #f96302;"></div>
+                </div>
+                <!-- Header Logo & Title -->
+                <div style="padding: 12px 10px 4px 10px; display: flex; align-items: center; gap: 6px;">
+                    {f'<img src="{logo_b64}" style="max-height: 26px; width: auto;">' if logo_b64 else ''}
+                    <div style="font-size: 10px; font-weight: 800; color: #102a5c; line-height: 1.1;">Yola Electricity<br>Distribution Company</div>
+                </div>
+                <!-- Photo Container -->
+                <div style="text-align: center; margin: 4px 0;">
+                    <div style="width: 105px; height: 125px; margin: 0 auto; border: 4px solid #e52e04; border-radius: 12px; background: #f8fafc; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                        {photo_render}
+                    </div>
+                </div>
+                <!-- Staff Info -->
+                <div style="text-align: center; padding: 0 6px;">
+                    <div style="font-size: 12.5px; font-weight: 900; color: #102a5c; text-transform: uppercase;">{disp_name}</div>
+                    <div style="font-size: 10.5px; font-weight: 800; color: #102a5c; text-transform: uppercase; margin-top: 2px;">{disp_desig}</div>
+                </div>
+                <!-- ID & Signature Table -->
+                <table style="width: 90%; margin: 6px auto 2px auto; font-size: 10px; font-weight: bold; color: #102a5c;">
+                    <tr>
+                        <td style="width: 45%;">ID No</td>
+                        <td>: {disp_id}</td>
+                    </tr>
+                    <tr>
+                        <td>Holder's Sign</td>
+                        <td>{sig_render}</td>
+                    </tr>
+                </table>
+                <!-- QR Code -->
+                <div style="text-align: center; margin-top: 2px;">
+                    <div style="display: inline-block; padding: 2px; border: 1px dashed #cbd5e1; border-radius: 3px; font-size: 7px; color: #64748b; font-weight: bold;">
+                        [ QR CODE ]
+                    </div>
+                </div>
+                <!-- Bottom Graphic Banner -->
+                <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: 16px;">
+                    <div style="position: absolute; bottom: 8px; left: 0; width: 100px; height: 5px; background: #e52e04;"></div>
+                    <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: 8px; background: #102a5c;"></div>
+                </div>
             </div>
-            <div style="text-align:center;padding:3px;">
-                {photo_render}
-                <div style="font-size:11px;font-weight:800;color:#0f172a;text-transform:uppercase;margin-top:3px;">{disp_name}</div>
-                <div style="font-size:8.5px;color:#475569;font-weight:600;">{disp_desig} ({disp_dept})</div>
-                <div style="background:#ff6b00;color:white;font-size:9px;font-weight:800;padding:2px 7px;border-radius:3px;display:inline-block;margin:3px 0;">ID: {disp_id}</div>
-                <div><span style="background:#e2e8f0;color:#0f172a;font-size:7.5px;font-weight:700;padding:1px 5px;border-radius:2px;text-transform:uppercase;display:inline-flex;align-items:center;">{cat_badge_html}</span></div>
+            """, unsafe_allow_html=True)
+        else:
+            # Permanent Staff Template Preview
+            st.markdown(f"""
+            <div style="width: 240px; height: 380px; background: #ffffff; border-radius: 12px; border: 2px solid #102a5c; box-shadow: 0 12px 30px rgba(0,0,0,0.12); overflow: hidden; margin: 0 auto; position: relative; font-family: Arial, sans-serif;">
+                <!-- Top Curved Orange Accent -->
+                <div style="position: absolute; top: 0; right: 0; width: 95px; height: 32px; background: #f96302; border-bottom-left-radius: 32px;"></div>
+                <!-- Header Logo & Title -->
+                <div style="padding: 12px 10px 4px 10px; display: flex; align-items: center; gap: 6px; position: relative; z-index: 2;">
+                    {f'<img src="{logo_b64}" style="max-height: 26px; width: auto;">' if logo_b64 else ''}
+                    <div style="font-size: 10px; font-weight: 800; color: #102a5c; line-height: 1.1;">Yola Electricity<br>Distribution Company</div>
+                </div>
+                <!-- Photo Container -->
+                <div style="text-align: center; margin: 4px 0;">
+                    <div style="width: 105px; height: 125px; margin: 0 auto; border: 4px solid #1e4587; background: #f8fafc; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                        {photo_render}
+                    </div>
+                </div>
+                <!-- Staff Info -->
+                <div style="text-align: center; padding: 0 6px;">
+                    <div style="font-size: 13px; font-weight: 900; color: #102a5c;">{disp_name}</div>
+                    <div style="background: #102a5c; color: white; font-size: 9px; font-weight: bold; padding: 3px 9px; border-radius: 12px; display: inline-block; margin: 3px 0 2px 0;">{disp_dept}</div>
+                </div>
+                <!-- ID & Signature Table -->
+                <table style="width: 90%; margin: 4px auto 2px auto; font-size: 10px; font-weight: bold; color: #102a5c;">
+                    <tr>
+                        <td style="width: 45%;">ID No</td>
+                        <td>: {disp_id}</td>
+                    </tr>
+                    <tr>
+                        <td>Holder's Sign</td>
+                        <td>{sig_render}</td>
+                    </tr>
+                </table>
+                <!-- QR Code -->
+                <div style="text-align: center; margin-top: 2px;">
+                    <div style="display: inline-block; padding: 2px; border: 1px dashed #cbd5e1; border-radius: 3px; font-size: 7px; color: #64748b; font-weight: bold;">
+                        [ QR CODE ]
+                    </div>
+                </div>
+                <!-- Bottom Graphic Accents -->
+                <div style="position: absolute; bottom: 0; left: 0; width: 65px; height: 26px; background: #f96302; border-top-right-radius: 26px;"></div>
+                <div style="position: absolute; bottom: 0; right: 0; width: 75px; height: 26px; background: #102a5c; border-top-left-radius: 26px;"></div>
             </div>
-            <div style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:5px;display:flex;align-items:center;justify-content:space-between;height:42px;">
-                {sig_render}
-                <div style="width:26px;height:26px;border:1px solid #0f172a;background:#e2e8f0;font-size:5.5px;display:flex;align-items:center;justify-content:center;color:#475569;">QR</div>
-            </div>
-            <div style="height:3.5px;background:linear-gradient(90deg, #ff6b00, #0f172a);"></div>
-        </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
 
     if submit_btn:
         if category in ["Intern", "NYSC"]:
