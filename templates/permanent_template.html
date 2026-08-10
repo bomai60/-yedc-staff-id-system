@@ -6,334 +6,170 @@
     <style>
         @page {
             size: 54mm 86mm;
-            margin: 0;
-        }
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Helvetica', 'Arial', sans-serif;
+            margin: 0mm;
         }
         body {
             width: 54mm;
             height: 86mm;
+            margin: 0;
+            padding: 0;
+            font-family: 'Helvetica', 'Arial', sans-serif;
             background-color: #ffffff;
             color: #102a5c;
-            overflow: hidden;
         }
-
-        .page {
-            width: 54mm;
-            height: 86mm;
-            position: relative;
-            page-break-after: always;
-            overflow: hidden;
-            background-color: #ffffff;
-        }
-        .page:last-child {
-            page-break-after: avoid;
-        }
-
-        /* Top Curved Orange Accent Header */
-        .top-curved-orange {
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 26mm;
-            height: 14mm;
-            background-color: #f96302;
-            border-bottom-left-radius: 14mm;
-        }
-
-        /* Header Logo & Title */
-        .header-box {
-            padding-top: 4mm;
-            padding-left: 2.5mm;
-            padding-right: 2.5mm;
-            display: table;
-            width: 100%;
-            position: relative;
-            z-index: 2;
-        }
-        .logo-td {
-            display: table-cell;
-            width: 10mm;
-            vertical-align: middle;
-        }
-        .logo-img {
-            max-height: 8.5mm;
-            max-width: 9.5mm;
-        }
-        .title-td {
-            display: table-cell;
-            vertical-align: middle;
-            padding-left: 1.5mm;
-        }
-        .company-name {
-            font-size: 7.5pt;
-            font-weight: bold;
-            color: #102a5c;
-            line-height: 1.1;
-        }
-
-        /* Staff Photo Section */
-        .photo-container {
-            text-align: center;
-            margin-top: 3mm;
-            margin-bottom: 2mm;
-            position: relative;
-        }
-        .photo-frame-blue {
-            width: 31mm;
-            height: 36mm;
-            margin: 0 auto;
-            border: 1.8mm solid #1e4587;
-            background-color: #f8fafc;
-        }
-        .staff-photo-img {
-            width: 27.4mm;
-            height: 32.4mm;
-        }
-
-        /* Staff Info Section */
-        .info-container {
-            text-align: center;
-            padding-left: 2mm;
-            padding-right: 2mm;
-        }
-        .staff-full-name {
-            font-size: 10.5pt;
-            font-weight: 900;
-            color: #102a5c;
-            letter-spacing: 0.2px;
-            margin-bottom: 1.2mm;
-        }
-
-        /* Department Pill / Badge */
-        .dept-pill-badge {
-            background-color: #102a5c;
-            color: #ffffff;
-            font-size: 6.5pt;
-            font-weight: bold;
-            padding: 1.2mm 3.5mm;
-            border-radius: 3.5mm;
-            display: inline-block;
-            margin-bottom: 1.8mm;
-            max-width: 48mm;
-        }
-
-        /* ID No & Holder's Sign Table */
-        .details-table {
-            width: 48mm;
-            margin: 0 auto 1.5mm auto;
+        table {
             border-collapse: collapse;
+            margin: 0;
+            padding: 0;
         }
-        .details-table td {
-            font-size: 7.5pt;
-            font-weight: bold;
-            color: #102a5c;
-            vertical-align: middle;
+        td {
+            padding: 0;
+            margin: 0;
+            vertical-align: top;
         }
-        .lbl-col {
-            width: 18mm;
-            text-align: left;
-        }
-        .val-col {
-            text-align: left;
-        }
-        .holder-sig-img {
-            max-width: 22mm;
-            max-height: 7mm;
-            vertical-align: middle;
-        }
-
-        /* QR Code Container with Corner Brackets */
-        .qr-section {
-            text-align: center;
-            margin-top: 1mm;
-        }
-        .qr-wrapper {
-            display: inline-block;
-            position: relative;
-            padding: 1.5mm;
-        }
-        .qr-img-box {
-            width: 13.5mm;
-            height: 13.5mm;
-        }
-
-        /* Bottom Curved Accents */
-        .bottom-curved-orange {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 18mm;
-            height: 10mm;
-            background-color: #f96302;
-            border-top-right-radius: 10mm;
-        }
-        .bottom-curved-blue {
-            position: absolute;
-            bottom: 0;
-            right: 0;
-            width: 20mm;
-            height: 10mm;
-            background-color: #102a5c;
-            border-top-left-radius: 10mm;
-        }
-
-        /* Back Page Specific Styles */
-        .back-content {
-            padding: 7mm 4mm 4mm 4mm;
-            text-align: left;
-            position: relative;
-            z-index: 2;
-        }
-        .cert-text {
-            font-size: 8.5pt;
-            font-weight: 800;
-            color: #102a5c;
-            line-height: 1.25;
-            margin-bottom: 5mm;
-        }
-        .back-logo-box {
-            margin-bottom: 5mm;
-        }
-        .return-title {
-            font-size: 8.5pt;
-            font-weight: 800;
-            color: #102a5c;
-            margin-bottom: 1mm;
-        }
-        .return-address {
-            font-size: 8pt;
-            color: #102a5c;
-            line-height: 1.2;
-            margin-bottom: 7mm;
-        }
-        .auth-sig-container {
-            text-align: center;
-            margin-top: 3mm;
-        }
-        .auth-sig-img {
-            max-width: 42mm;
-            max-height: 12mm;
-        }
-        .auth-sig-line {
-            width: 44mm;
-            height: 0.5mm;
-            background-color: #102a5c;
-            margin: 1mm auto 1mm auto;
-        }
-        .auth-sig-label {
-            font-size: 7.5pt;
-            font-weight: 900;
-            color: #102a5c;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+        .page-break {
+            page-break-before: always;
         }
     </style>
 </head>
 <body>
-    <!-- ================= PAGE 1: FRONT ================= -->
-    <div class="page">
-        <!-- Top Orange Accent -->
-        <div class="top-curved-orange"></div>
 
-        <!-- Header -->
-        <div class="header-box">
-            <div class="logo-td">
-                {% if logo_path %}
-                <img src="{{ logo_path }}" class="logo-img" alt="Logo">
-                {% endif %}
-            </div>
-            <div class="title-td">
-                <div class="company-name">Yola Electricity<br>Distribution Company</div>
-            </div>
-        </div>
+<!-- ================= PAGE 1: FRONT ================= -->
+<table width="54mm" height="86mm" style="width: 54mm; height: 86mm; background-color: #ffffff;">
+    <!-- Top Orange Accent Bar -->
+    <tr>
+        <td height="4mm" style="background-color: #f96302; height: 4mm;"></td>
+    </tr>
 
-        <!-- Photo -->
-        <div class="photo-container">
-            <div class="photo-frame-blue">
-                <img src="{{ photo_path }}" class="staff-photo-img" alt="Staff Photo">
-            </div>
-        </div>
+    <!-- Header Logo & Title -->
+    <tr>
+        <td style="padding: 2.5mm 2mm 1mm 2mm;">
+            <table width="100%">
+                <tr>
+                    <td width="10mm" style="vertical-align: middle;">
+                        {% if logo_path %}<img src="{{ logo_path }}" width="10mm" style="max-height: 8mm;">{% endif %}
+                    </td>
+                    <td style="vertical-align: middle; padding-left: 1.5mm;">
+                        <div style="font-size: 7.5pt; font-weight: bold; color: #102a5c; line-height: 1.1;">Yola Electricity<br>Distribution Company</div>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
 
-        <!-- Staff Details -->
-        <div class="info-container">
-            <div class="staff-full-name">{{ full_name }}</div>
+    <!-- Photo Container -->
+    <tr>
+        <td align="center" style="text-align: center; padding: 1mm 0;">
+            <table align="center" style="margin: 0 auto; border: 1.5mm solid #1e4587; background-color: #f8fafc;">
+                <tr>
+                    <td>
+                        <img src="{{ photo_path }}" width="26mm" height="32mm" style="width: 26mm; height: 32mm;">
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+
+    <!-- Staff Details -->
+    <tr>
+        <td align="center" style="text-align: center; padding: 1mm 2mm 0mm 2mm;">
+            <div style="font-size: 10pt; font-weight: bold; color: #102a5c;">{{ full_name }}</div>
             {% if department and department != "N/A" %}
-            <div class="dept-pill-badge">{{ department }}</div>
+            <div style="background-color: #102a5c; color: #ffffff; font-size: 6.5pt; font-weight: bold; padding: 1.2mm 3.5mm; margin-top: 1mm; display: inline-block;">{{ department }}</div>
             {% else %}
-            <div class="dept-pill-badge">{{ designation }}</div>
+            <div style="background-color: #102a5c; color: #ffffff; font-size: 6.5pt; font-weight: bold; padding: 1.2mm 3.5mm; margin-top: 1mm; display: inline-block;">{{ designation }}</div>
             {% endif %}
-        </div>
+        </td>
+    </tr>
 
-        <!-- ID & Signature Table -->
-        <table class="details-table">
-            <tr>
-                <td class="lbl-col">ID No</td>
-                <td class="val-col">: {{ emp_id }}</td>
-            </tr>
-            <tr>
-                <td class="lbl-col" style="padding-top: 1mm;">Holder's Sign</td>
-                <td class="val-col" style="padding-top: 1mm;">
-                    <img src="{{ signature_path }}" class="holder-sig-img" alt="Sign">
-                </td>
-            </tr>
-        </table>
+    <!-- ID & Signature Table -->
+    <tr>
+        <td align="center" style="padding: 1.5mm 3mm;">
+            <table width="48mm" style="width: 48mm; margin: 0 auto;">
+                <tr>
+                    <td width="18mm" style="font-size: 7.5pt; font-weight: bold; color: #102a5c; text-align: left;">ID No</td>
+                    <td style="font-size: 7.5pt; font-weight: bold; color: #102a5c; text-align: left;">: {{ emp_id }}</td>
+                </tr>
+                <tr>
+                    <td style="font-size: 7.5pt; font-weight: bold; color: #102a5c; text-align: left; padding-top: 1mm;">Holder's Sign</td>
+                    <td style="text-align: left; padding-top: 1mm;">
+                        <img src="{{ signature_path }}" height="6mm" style="max-height: 6mm; max-width: 22mm;">
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
 
-        <!-- QR Code -->
-        <div class="qr-section">
-            <div class="qr-wrapper">
-                <img src="{{ qr_path }}" class="qr-img-box" alt="QR Code">
-            </div>
-        </div>
+    <!-- QR Code -->
+    <tr>
+        <td align="center" style="text-align: center; vertical-align: middle; padding-bottom: 2mm;">
+            <img src="{{ qr_path }}" width="13mm" height="13mm" style="width: 13mm; height: 13mm;">
+        </td>
+    </tr>
 
-        <!-- Bottom Graphic Accents -->
-        <div class="bottom-curved-orange"></div>
-        <div class="bottom-curved-blue"></div>
-    </div>
+    <!-- Bottom Graphic Banner -->
+    <tr>
+        <td height="3mm" style="background-color: #102a5c; height: 3mm;"></td>
+    </tr>
+</table>
 
-    <!-- ================= PAGE 2: BACK ================= -->
-    <div class="page">
-        <!-- Top Orange Accent -->
-        <div class="top-curved-orange"></div>
+<div class="page-break"></div>
 
-        <div class="back-content">
-            <div class="cert-text">
+<!-- ================= PAGE 2: BACK ================= -->
+<table width="54mm" height="86mm" style="width: 54mm; height: 86mm; background-color: #ffffff;">
+    <!-- Top Orange Accent Bar -->
+    <tr>
+        <td height="4mm" style="background-color: #f96302; height: 4mm;"></td>
+    </tr>
+
+    <!-- Back Page Content -->
+    <tr>
+        <td style="padding: 4mm 3mm 2mm 3mm; vertical-align: top;">
+            <div style="font-size: 8.5pt; font-weight: bold; color: #102a5c; line-height: 1.25; margin-bottom: 4mm;">
                 This is to certify that the bearer whose name, photograph and signature appear overleaf is a staff of
             </div>
 
-            <div class="header-box back-logo-box" style="padding: 0;">
-                <div class="logo-td">
-                    {% if logo_path %}
-                    <img src="{{ logo_path }}" class="logo-img" alt="Logo">
-                    {% endif %}
-                </div>
-                <div class="title-td">
-                    <div class="company-name" style="font-size: 8.5pt;">Yola Electricity<br>Distribution Company</div>
-                </div>
-            </div>
+            <table width="100%" style="margin-bottom: 4mm;">
+                <tr>
+                    <td width="10mm" style="vertical-align: middle;">
+                        {% if logo_path %}<img src="{{ logo_path }}" width="10mm" style="max-height: 8mm;">{% endif %}
+                    </td>
+                    <td style="vertical-align: middle; padding-left: 1.5mm;">
+                        <div style="font-size: 8.5pt; font-weight: bold; color: #102a5c; line-height: 1.1;">Yola Electricity<br>Distribution Company</div>
+                    </td>
+                </tr>
+            </table>
 
-            <div class="return-title">If found, Please return to</div>
-            <div class="return-address">
+            <div style="font-size: 8.5pt; font-weight: bold; color: #102a5c; margin-bottom: 1mm;">If found, Please return to</div>
+            <div style="font-size: 8pt; color: #102a5c; line-height: 1.2; margin-bottom: 6mm;">
                 2, Atiku Abubakar Road, Jimeta-Yola<br>
                 Adamawa State Nigeria
             </div>
 
-            <div class="auth-sig-container">
-                {% if auth_sig_path %}
-                <img src="{{ auth_sig_path }}" class="auth-sig-img" alt="Authorised Signature">
-                {% endif %}
-                <div class="auth-sig-line"></div>
-                <div class="auth-sig-label">AUTHORISED SIGNATURE</div>
-            </div>
-        </div>
+            <!-- Authorised Signature Block -->
+            <table width="48mm" style="width: 48mm; margin: 0 auto; text-align: center;">
+                <tr>
+                    <td align="center">
+                        {% if auth_sig_path %}<img src="{{ auth_sig_path }}" width="38mm" style="max-height: 10mm;">{% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td height="0.5mm" style="background-color: #102a5c; height: 0.5mm;"></td>
+                </tr>
+                <tr>
+                    <td style="font-size: 7.5pt; font-weight: bold; color: #102a5c; padding-top: 1mm; text-transform: uppercase;">
+                        AUTHORISED SIGNATURE
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
 
-        <!-- Bottom Graphic Accents -->
-        <div class="bottom-curved-orange"></div>
-        <div class="bottom-curved-blue"></div>
-    </div>
+    <!-- Bottom Graphic Banner -->
+    <tr>
+        <td height="3mm" style="background-color: #102a5c; height: 3mm;"></td>
+    </tr>
+</table>
+
 </body>
 </html>
