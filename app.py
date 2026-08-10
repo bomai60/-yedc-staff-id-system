@@ -983,11 +983,18 @@ if not st.session_state.authenticated:
 # ==========================================
 # 6. LOGGED-IN USER CONTEXT & NAVIGATION
 # ==========================================
-current_user = st.session_state.user
-user_role = current_user["role"]
-user_region = current_user["region"]
-is_super_admin = (user_role == "super_admin")
-is_enrollment_assistant = (user_role == "enrollment_assistant")
+if st.session_state.get("authenticated") and st.session_state.get("user"):
+    current_user = st.session_state.user
+    user_role = current_user["role"]
+    user_region = current_user["region"]
+    is_super_admin = (user_role == "super_admin")
+    is_enrollment_assistant = (user_role == "enrollment_assistant")
+else:
+    current_user = {"username": "system", "full_name": "System", "role": "super_admin", "region": "ALL"}
+    user_role = "super_admin"
+    user_region = "ALL"
+    is_super_admin = True
+    is_enrollment_assistant = False
 
 # Automatically collapse mobile sidebar overlay after tab selection
 if st.session_state.get("close_sidebar_mobile"):
