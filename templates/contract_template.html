@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>YEDC Contract Staff ID Card - {{ emp_id }}</title>
+    <style>
+        @page {
+            size: 54mm 86mm;
+            margin: 0;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Helvetica', 'Arial', sans-serif;
+        }
+        body {
+            width: 54mm;
+            height: 86mm;
+            background-color: #ffffff;
+            color: #102a5c;
+            overflow: hidden;
+        }
+
+        .page {
+            width: 54mm;
+            height: 86mm;
+            position: relative;
+            page-break-after: always;
+            overflow: hidden;
+            background-color: #ffffff;
+        }
+        .page:last-child {
+            page-break-after: avoid;
+        }
+
+        /* Top Red & Orange Geometric Banner Graphics */
+        .top-banner-graphic {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 54mm;
+            height: 12mm;
+        }
+        .stripe-red-top {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 32mm;
+            height: 4mm;
+            background-color: #e52e04;
+        }
+        .stripe-orange-top {
+            position: absolute;
+            top: 5mm;
+            right: 0;
+            width: 22mm;
+            height: 2.5mm;
+            background-color: #f96302;
+        }
+
+        /* Header Logo & Title */
+        .header-box {
+            padding-top: 5mm;
+            padding-left: 2.5mm;
+            padding-right: 2.5mm;
+            display: table;
+            width: 100%;
+        }
+        .logo-td {
+            display: table-cell;
+            width: 10mm;
+            vertical-align: middle;
+        }
+        .logo-img {
+            max-height: 8.5mm;
+            max-width: 9.5mm;
+        }
+        .title-td {
+            display: table-cell;
+            vertical-align: middle;
+            padding-left: 1.5mm;
+        }
+        .company-name {
+            font-size: 7.5pt;
+            font-weight: bold;
+            color: #102a5c;
+            line-height: 1.1;
+        }
+
+        /* Staff Photo Section */
+        .photo-container {
+            text-align: center;
+            margin-top: 2.5mm;
+            margin-bottom: 2mm;
+            position: relative;
+        }
+        .photo-frame-red {
+            width: 31mm;
+            height: 36mm;
+            margin: 0 auto;
+            border: 1.8mm solid #e52e04;
+            border-radius: 4mm;
+            background-color: #f8fafc;
+        }
+        .staff-photo-img {
+            width: 27.4mm;
+            height: 32.4mm;
+            border-radius: 2.5mm;
+        }
+
+        /* Staff Info Section */
+        .info-container {
+            text-align: center;
+            padding-left: 2mm;
+            padding-right: 2mm;
+        }
+        .staff-full-name {
+            font-size: 9.5pt;
+            font-weight: 900;
+            color: #102a5c;
+            text-transform: uppercase;
+            letter-spacing: 0.2px;
+            margin-bottom: 0.8mm;
+        }
+        .staff-role {
+            font-size: 8pt;
+            font-weight: 800;
+            color: #102a5c;
+            text-transform: uppercase;
+            margin-bottom: 1.5mm;
+        }
+
+        /* ID No & Holder's Sign Table */
+        .details-table {
+            width: 48mm;
+            margin: 0 auto 1.5mm auto;
+            border-collapse: collapse;
+        }
+        .details-table td {
+            font-size: 7.5pt;
+            font-weight: bold;
+            color: #102a5c;
+            vertical-align: middle;
+        }
+        .lbl-col {
+            width: 18mm;
+            text-align: left;
+        }
+        .val-col {
+            text-align: left;
+        }
+        .holder-sig-img {
+            max-width: 22mm;
+            max-height: 7mm;
+            vertical-align: middle;
+        }
+
+        /* QR Code Container with Corner Brackets */
+        .qr-section {
+            text-align: center;
+            margin-top: 1mm;
+        }
+        .qr-wrapper {
+            display: inline-block;
+            position: relative;
+            padding: 1.5mm;
+        }
+        .qr-img-box {
+            width: 13.5mm;
+            height: 13.5mm;
+        }
+
+        /* Bottom Geometric Banner Graphics */
+        .bottom-banner-graphic {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 54mm;
+            height: 7mm;
+        }
+        .stripe-red-bottom {
+            position: absolute;
+            bottom: 3.5mm;
+            left: 0;
+            width: 24mm;
+            height: 2mm;
+            background-color: #e52e04;
+        }
+        .stripe-blue-bottom {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 54mm;
+            height: 3.5mm;
+            background-color: #102a5c;
+        }
+
+        /* Back Page Specific Styles */
+        .back-content {
+            padding: 7mm 4mm 4mm 4mm;
+            text-align: left;
+        }
+        .cert-text {
+            font-size: 8.5pt;
+            font-weight: 800;
+            color: #102a5c;
+            line-height: 1.25;
+            margin-bottom: 5mm;
+        }
+        .back-logo-box {
+            margin-bottom: 5mm;
+        }
+        .return-title {
+            font-size: 8.5pt;
+            font-weight: 800;
+            color: #102a5c;
+            margin-bottom: 1mm;
+        }
+        .return-address {
+            font-size: 8pt;
+            color: #102a5c;
+            line-height: 1.2;
+            margin-bottom: 7mm;
+        }
+        .auth-sig-container {
+            text-align: center;
+            margin-top: 3mm;
+        }
+        .auth-sig-img {
+            max-width: 42mm;
+            max-height: 12mm;
+        }
+        .auth-sig-line {
+            width: 44mm;
+            height: 0.5mm;
+            background-color: #102a5c;
+            margin: 1mm auto 1mm auto;
+        }
+        .auth-sig-label {
+            font-size: 7.5pt;
+            font-weight: 900;
+            color: #102a5c;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+<body>
+    <!-- ================= PAGE 1: FRONT ================= -->
+    <div class="page">
+        <!-- Top Graphic Stripes -->
+        <div class="top-banner-graphic">
+            <div class="stripe-red-top"></div>
+            <div class="stripe-orange-top"></div>
+        </div>
+
+        <!-- Header -->
+        <div class="header-box">
+            <div class="logo-td">
+                {% if logo_path %}
+                <img src="{{ logo_path }}" class="logo-img" alt="Logo">
+                {% endif %}
+            </div>
+            <div class="title-td">
+                <div class="company-name">Yola Electricity<br>Distribution Company</div>
+            </div>
+        </div>
+
+        <!-- Photo -->
+        <div class="photo-container">
+            <div class="photo-frame-red">
+                <img src="{{ photo_path }}" class="staff-photo-img" alt="Staff Photo">
+            </div>
+        </div>
+
+        <!-- Staff Details -->
+        <div class="info-container">
+            <div class="staff-full-name">{{ full_name }}</div>
+            <div class="staff-role">{{ designation }}</div>
+        </div>
+
+        <!-- ID & Signature Table -->
+        <table class="details-table">
+            <tr>
+                <td class="lbl-col">ID No</td>
+                <td class="val-col">: {{ emp_id }}</td>
+            </tr>
+            <tr>
+                <td class="lbl-col" style="padding-top: 1mm;">Holder's Sign</td>
+                <td class="val-col" style="padding-top: 1mm;">
+                    <img src="{{ signature_path }}" class="holder-sig-img" alt="Sign">
+                </td>
+            </tr>
+        </table>
+
+        <!-- QR Code -->
+        <div class="qr-section">
+            <div class="qr-wrapper">
+                <img src="{{ qr_path }}" class="qr-img-box" alt="QR Code">
+            </div>
+        </div>
+
+        <!-- Bottom Graphic Banner -->
+        <div class="bottom-banner-graphic">
+            <div class="stripe-red-bottom"></div>
+            <div class="stripe-blue-bottom"></div>
+        </div>
+    </div>
+
+    <!-- ================= PAGE 2: BACK ================= -->
+    <div class="page">
+        <!-- Top Graphic Stripes -->
+        <div class="top-banner-graphic">
+            <div class="stripe-red-top"></div>
+            <div class="stripe-orange-top"></div>
+        </div>
+
+        <div class="back-content">
+            <div class="cert-text">
+                This is to certify that the bearer whose name, photograph and signature appear overleaf is a staff of
+            </div>
+
+            <div class="header-box back-logo-box" style="padding: 0;">
+                <div class="logo-td">
+                    {% if logo_path %}
+                    <img src="{{ logo_path }}" class="logo-img" alt="Logo">
+                    {% endif %}
+                </div>
+                <div class="title-td">
+                    <div class="company-name" style="font-size: 8.5pt;">Yola Electricity<br>Distribution Company</div>
+                </div>
+            </div>
+
+            <div class="return-title">If found, Please return to</div>
+            <div class="return-address">
+                2, Atiku Abubakar Road, Jimeta-Yola<br>
+                Adamawa State Nigeria
+            </div>
+
+            <div class="auth-sig-container">
+                {% if auth_sig_path %}
+                <img src="{{ auth_sig_path }}" class="auth-sig-img" alt="Authorised Signature">
+                {% endif %}
+                <div class="auth-sig-line"></div>
+                <div class="auth-sig-label">AUTHORISED SIGNATURE</div>
+            </div>
+        </div>
+
+        <!-- Bottom Graphic Banner -->
+        <div class="bottom-banner-graphic">
+            <div class="stripe-red-bottom"></div>
+            <div class="stripe-blue-bottom"></div>
+        </div>
+    </div>
+</body>
+</html>

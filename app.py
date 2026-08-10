@@ -371,19 +371,34 @@ def convert_html_to_pdf(html_content, output_pdf_path, is_card=False):
     except Exception as e:
         return False, f"PDF generation error: {str(e)}"
 
-def generate_pdf_card(record):
-    if not TEMPLATE_PATH.exists():
-        return False, f"Template file not found at {TEMPLATE_PATH}"
+CONTRACT_TEMPLATE_PATH = BASE_DIR / "templates" / "contract_template.html"
+PERMANENT_TEMPLATE_PATH = BASE_DIR / "templates" / "permanent_template.html"
+AUTH_SIG_PATH = DIRS["assets"] / "authorised_signature.png"
 
-    with open(TEMPLATE_PATH, "r", encoding="utf-8") as f:
+def generate_pdf_card(record):
+    rec_cat = record.get("category", "")
+    
+    if rec_cat == "Contract" and CONTRACT_TEMPLATE_PATH.exists():
+        t_path = CONTRACT_TEMPLATE_PATH
+    elif rec_cat == "Permanent" and PERMANENT_TEMPLATE_PATH.exists():
+        t_path = PERMANENT_TEMPLATE_PATH
+    elif PERMANENT_TEMPLATE_PATH.exists():
+        t_path = PERMANENT_TEMPLATE_PATH
+    else:
+        t_path = TEMPLATE_PATH
+
+    if not t_path.exists():
+        return False, f"Template file not found at {t_path}"
+
+    with open(t_path, "r", encoding="utf-8") as f:
         template_content = f.read()
 
     template = jinja2.Template(template_content)
 
     logo_uri = get_asset_b64(LOGO_PATH)
     nysc_logo_uri = get_asset_b64(NYSC_LOGO_PATH)
+    auth_sig_uri = get_asset_b64(AUTH_SIG_PATH)
 
-    rec_cat = record.get("category", "")
     if rec_cat in ["Intern", "NYSC"]:
         dept_val = "N/A"
         desig_val = rec_cat
@@ -401,6 +416,7 @@ def generate_pdf_card(record):
         "emp_id": record["emp_id"],
         "logo_path": logo_uri,
         "nysc_logo_path": nysc_logo_uri,
+        "auth_sig_path": auth_sig_uri,
         "photo_path": get_asset_b64(record["photo_path"]),
         "signature_path": get_asset_b64(record["signature_path"]),
         "qr_path": get_asset_b64(record["qr_path"])
