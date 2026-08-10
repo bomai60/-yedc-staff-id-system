@@ -291,6 +291,24 @@ def process_and_optimize_photo(photo_file):
     )
     return optimized_image
 
+def auto_generate_staff_qr(emp_id, full_name, category, region):
+    """Automatically generate a scannable dummy QR code for newly registered staff records."""
+    try:
+        import qrcode
+        qr_data = f"YEDC OFFICIAL ID VERIFICATION\nID: {emp_id}\nName: {full_name}\nCategory: {category}\nRegion: {region}\nStatus: VERIFIED ACTIVE"
+        qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_M, box_size=10, border=2)
+        qr.add_data(qr_data)
+        qr.make(fit=True)
+        qr_img = qr.make_image(fill_color="#0F172A", back_color="#FFFFFF")
+    except Exception:
+        qr_img = Image.new("RGB", (200, 200), color=(15, 23, 42))
+
+    qr_filename = f"{emp_id}_qr.png"
+    qr_rel_path = f"qr_codes/{qr_filename}"
+    qr_abs_path = DIRS["qr_codes"] / qr_filename
+    qr_img.save(qr_abs_path)
+    return qr_rel_path
+
 def find_wkhtmltopdf_path():
     common_paths = [
         r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe",
@@ -1473,7 +1491,7 @@ elif selected_page == "📝 Staff Register":
                 sig_image.save(buf_sig, format="PNG")
                 sig_b64_str = f"data:image/png;base64,{base64.b64encode(buf_sig.getvalue()).decode()}"
 
-                qr_rel_path = "PENDING"
+                qr_rel_path = auto_generate_staff_qr(emp_id, full_name, category, staff_region)
 
                 success, msg = insert_staff_record(
                     emp_id=emp_id,
@@ -1488,6 +1506,20 @@ elif selected_page == "📝 Staff Register":
                 )
 
                 if success:
+                    # Pre-generate CR80 PDF ID card immediately
+                    new_record = {
+                        "emp_id": emp_id,
+                        "full_name": full_name,
+                        "category": category,
+                        "designation": final_desig,
+                        "department": final_dept,
+                        "region": staff_region,
+                        "photo_path": photo_rel_path,
+                        "signature_path": sig_rel_path,
+                        "qr_path": qr_rel_path
+                    }
+                    generate_pdf_card(new_record)
+
                     st.session_state.form_saved_success = True
                     st.session_state.saved_emp_id = emp_id
                     st.session_state.last_saved_record = {
