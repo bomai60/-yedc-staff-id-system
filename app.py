@@ -502,6 +502,41 @@ def create_pdf_zip_archive():
     return zip_buffer
 
 # ==========================================
+# DELETION CONFIRMATION DIALOG MODALS
+# ==========================================
+if hasattr(st, "dialog"):
+    @st.dialog("⚠️ Confirm Staff Deletion")
+    def confirm_delete_staff_modal(emp_id, full_name):
+        st.warning(f"Are you sure you want to permanently delete staff record **'{emp_id}'** ({full_name})?")
+        st.caption("⚠️ This action cannot be undone.")
+        st.markdown("<br>", unsafe_allow_html=True)
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("🗑️ Yes, Delete Permanently", type="primary", use_container_width=True, key=f"modal_del_confirm_{emp_id}"):
+                delete_staff_record(emp_id)
+                st.session_state.editing_emp_id = None
+                st.success(f"Staff record '{emp_id}' deleted successfully.")
+                st.rerun()
+        with c2:
+            if st.button("❌ Cancel", use_container_width=True, key=f"modal_del_cancel_{emp_id}"):
+                st.rerun()
+
+    @st.dialog("⚠️ Confirm User Account Deletion")
+    def confirm_delete_user_modal(username, full_name):
+        st.warning(f"Are you sure you want to delete system user account **'{username}'** ({full_name})?")
+        st.caption("⚠️ This user will no longer be able to log in to the portal.")
+        st.markdown("<br>", unsafe_allow_html=True)
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("🗑️ Yes, Delete User Account", type="primary", use_container_width=True, key=f"modal_del_u_confirm_{username}"):
+                delete_user(username)
+                st.success(f"User account '{username}' deleted successfully.")
+                st.rerun()
+        with c2:
+            if st.button("❌ Cancel", use_container_width=True, key=f"modal_del_u_cancel_{username}"):
+                st.rerun()
+
+# ==========================================
 # 4. STREAMLIT UI PAGE SETUP & ULTRA-PREMIUM ENTERPRISE STYLING
 # ==========================================
 st.set_page_config(
@@ -1731,9 +1766,12 @@ elif selected_page == "🔍 Staff Directory" and user_role in ["super_admin", "r
                         st.rerun()
 
                     if st.button(f"🗑️ Delete Record", key=f"del_{staff['emp_id']}"):
-                        delete_staff_record(staff["emp_id"])
-                        st.success(f"Deleted {staff['emp_id']}")
-                        st.rerun()
+                        if hasattr(st, "dialog"):
+                            confirm_delete_staff_modal(staff['emp_id'], staff['full_name'])
+                        else:
+                            st.session_state.confirm_delete_emp_id = staff["emp_id"]
+                            st.session_state.confirm_delete_staff_name = staff["full_name"]
+                            st.rerun()
 
 
 # ==========================================
@@ -1923,6 +1961,8 @@ elif selected_page == "👥 User Management" and is_super_admin:
                 
                 if u["username"] != "admin" and u["username"] != current_user["username"]:
                     if st.button(f"🗑️ Delete User Account", key=f"del_u_{u['username']}"):
-                        delete_user(u["username"])
-                        st.success(f"User '{u['username']}' deleted.")
-                        st.rerun()
+                        if hasattr(st, "dialog"):
+                            confirm_delete_user_modal(u['username'], u['full_name'])
+                        else:
+                            st.session_state.confirm_delete_username = u["username"]
+                            st.rerun()
