@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>YEDC Identity Card Request Form - {{ emp_id }}</title>
+    <title>YEDC Identity Card Request Form - {{ emp_id }} - {{ full_name }}</title>
     <style>
         @page {
             size: A4 portrait;
-            margin: 12mm 15mm;
+            margin: 10mm 14mm;
         }
         * {
             box-sizing: border-box;
@@ -22,41 +22,56 @@
         }
         .header-table {
             width: 100%;
-            border-bottom: 1.5px solid #334155;
+            border-bottom: 2px solid #0c1a40;
             padding-bottom: 8px;
-            margin-bottom: 22px;
+            margin-bottom: 12px;
         }
         .logo-img {
-            max-height: 50px;
+            max-height: 52px;
             width: auto;
         }
         .header-title-main {
             font-size: 13pt;
             font-weight: bold;
-            color: #334155;
+            color: #0c1a40;
             text-align: right;
-            margin-bottom: 4px;
+            margin-bottom: 3px;
         }
         .header-title-sub {
-            font-size: 12pt;
+            font-size: 11pt;
             font-weight: bold;
-            color: #0f172a;
+            color: #334155;
             text-align: right;
+        }
+
+        /* Category Banner */
+        .category-banner {
+            background-color: #0c1a40;
+            color: #ffffff;
+            font-size: 12pt;
+            font-weight: 900;
+            text-align: center;
+            padding: 6px 12px;
+            border-radius: 4px;
+            letter-spacing: 1px;
+            margin-bottom: 18px;
+            text-transform: uppercase;
         }
 
         .photo-container {
-            margin-bottom: 22px;
+            margin-bottom: 18px;
             margin-left: 2px;
         }
         .photo-img {
-            width: 120px;
-            height: 150px;
+            width: 125px;
+            height: 155px;
             object-fit: cover;
-            border: 1px solid #475569;
+            border: 2px solid #0c1a40;
+            border-radius: 4px;
         }
 
         .field-row {
-            margin-bottom: 22px;
+            margin-bottom: 18px;
             font-size: 11pt;
             line-height: 1.4;
         }
@@ -65,7 +80,8 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
             display: inline-block;
-            min-width: 150px;
+            min-width: 160px;
+            color: #0c1a40;
         }
         .dots-line {
             display: inline-block;
@@ -75,25 +91,25 @@
             padding-right: 8px;
             font-weight: bold;
             font-size: 11.5pt;
-            color: #0f172a;
+            color: #0c1a40;
             text-transform: uppercase;
         }
 
         .purpose-box {
-            margin-top: 25px;
-            margin-bottom: 22px;
+            margin-top: 20px;
+            margin-bottom: 18px;
             font-size: 10.5pt;
         }
         .purpose-option {
             display: inline-block;
-            margin-right: 32px;
+            margin-right: 28px;
             font-weight: bold;
         }
         .checkbox-sq {
             display: inline-block;
             width: 14px;
             height: 14px;
-            border: 1.5px solid #0f172a;
+            border: 1.5px solid #0c1a40;
             margin-right: 6px;
             vertical-align: middle;
             text-align: center;
@@ -101,12 +117,12 @@
             font-size: 10px;
         }
         .checkbox-sq.checked {
-            background: #0f172a;
+            background: #0c1a40;
             color: #ffffff;
         }
 
         .signature-section {
-            margin-top: 30px;
+            margin-top: 24px;
         }
         .sig-container {
             display: inline-block;
@@ -122,6 +138,16 @@
             display: block;
             margin-bottom: -1px;
         }
+
+        .badge-cat {
+            display: inline-block;
+            padding: 3px 10px;
+            background-color: #ff5522;
+            color: #ffffff;
+            font-weight: bold;
+            font-size: 10.5pt;
+            border-radius: 3px;
+        }
     </style>
 </head>
 <body>
@@ -133,17 +159,22 @@
                 {% if logo_path %}
                 <img src="{{ logo_path }}" class="logo-img" alt="YEDC Logo">
                 {% else %}
-                <div style="font-weight: bold; font-size: 16pt;">YEDC</div>
+                <div style="font-weight: bold; font-size: 16pt; color: #0c1a40;">YEDC</div>
                 {% endif %}
             </td>
             <td style="width: 60%; vertical-align: middle;">
-                <div class="header-title-main">Human Resource Management</div>
-                <div class="header-title-sub">Identity Card Request Form</div>
+                <div class="header-title-main">YOLA ELECTRICITY DISTRIBUTION COMPANY</div>
+                <div class="header-title-sub">Human Resource Management - ID Card Request Form</div>
             </td>
         </tr>
     </table>
 
-    <!-- Staff Photo -->
+    <!-- Prominent Category Indicator Banner -->
+    <div class="category-banner">
+        STAFF CATEGORY: {{ category }}
+    </div>
+
+    <!-- Staff Passport Photo -->
     <div class="photo-container">
         {% if photo_path %}
         <img src="{{ photo_path }}" class="photo-img" alt="Staff Photo">
@@ -154,56 +185,66 @@
 
     <!-- Staff Details Form Fields -->
     <div class="field-row">
-        <span class="field-label">STAFF NAME:</span>
-        <span class="dots-line" style="min-width: 420px;">{{ full_name }}</span>
+        <span class="field-label">STAFF CATEGORY:</span>
+        <span class="badge-cat">{{ category }}</span>
     </div>
 
     <div class="field-row">
-        <span class="field-label">STAFF NUMBER:</span>
+        <span class="field-label">STAFF FULL NAME:</span>
+        <span class="dots-line" style="min-width: 400px;">{{ full_name }}</span>
+    </div>
+
+    <div class="field-row">
+        <span class="field-label">STAFF ID / NO:</span>
         <span style="font-weight: bold;">(</span>
         <span class="dots-line" style="min-width: 240px;">{{ emp_id }}</span>
         <span style="font-weight: bold;">)</span>
     </div>
 
     <div class="field-row">
-        <span class="field-label">DEPARTMENT:</span>
-        <span class="dots-line" style="min-width: 420px;">{{ department }}</span>
+        <span class="field-label">DEPARTMENT / UNIT:</span>
+        <span class="dots-line" style="min-width: 400px;">{{ department }}</span>
     </div>
 
     <div class="field-row">
-        <span class="field-label">Role:</span>
-        <span class="dots-line" style="min-width: 470px;">{{ designation }}</span>
+        <span class="field-label">ROLE / DESIGNATION:</span>
+        <span class="dots-line" style="min-width: 400px;">{{ designation }}</span>
+    </div>
+
+    <div class="field-row">
+        <span class="field-label">ASSIGNED REGION:</span>
+        <span class="dots-line" style="min-width: 400px;">{{ region }}</span>
     </div>
 
     <!-- Purpose of Request -->
     <div class="purpose-box">
         <span class="field-label" style="min-width: 180px;">PURPOSE OF REQUEST:</span>
         <span class="purpose-option">
-            <span class="checkbox-sq checked">✓</span> New Employee
+            <span class="checkbox-sq checked">✓</span> New Enrollment
         </span>
         <span class="purpose-option">
-            <span class="checkbox-sq"></span> Not received
+            <span class="checkbox-sq"></span> Card Replacement
         </span>
         <span class="purpose-option">
-            <span class="checkbox-sq"></span> Lost/Stolen
+            <span class="checkbox-sq"></span> Re-issuance
         </span>
     </div>
 
     <!-- Dates -->
     <div class="field-row">
         <span class="field-label">DATE OF REQUEST:</span>
-        <span class="dots-line" style="min-width: 420px;">{{ date_of_request }}</span>
+        <span class="dots-line" style="min-width: 400px;">{{ date_of_request }}</span>
     </div>
 
     <div class="field-row">
-        <span class="field-label">EXPECTED DATE:</span>
-        <span class="dots-line" style="min-width: 420px;">{{ expected_date }}</span>
+        <span class="field-label">EXPECTED ISSUE DATE:</span>
+        <span class="dots-line" style="min-width: 400px;">{{ expected_date }}</span>
     </div>
 
     <!-- Signatures -->
     <div class="signature-section">
-        <div class="field-row" style="margin-bottom: 22px;">
-            <span class="field-label" style="vertical-align: bottom;">STAFF SIGN:</span>
+        <div class="field-row" style="margin-bottom: 20px;">
+            <span class="field-label" style="vertical-align: bottom;">STAFF SIGNATURE:</span>
             <div class="sig-container">
                 {% if signature_path %}
                 <img src="{{ signature_path }}" class="sig-img" alt="Staff Signature">
@@ -214,9 +255,9 @@
         </div>
 
         <div class="field-row">
-            <span class="field-label" style="vertical-align: bottom;">HR OFFICER SIGN:</span>
+            <span class="field-label" style="vertical-align: bottom;">HR VERIFICATION:</span>
             <div class="sig-container">
-                <span style="font-family: 'Brush Script MT', cursive, sans-serif; font-size: 13pt; color: #1e3a8a; font-weight: bold; line-height: 28px;">HR Approved / Verified</span>
+                <span style="font-family: 'Brush Script MT', cursive, sans-serif; font-size: 13pt; color: #0c1a40; font-weight: bold; line-height: 28px;">YEDC HR Verified</span>
             </div>
         </div>
     </div>

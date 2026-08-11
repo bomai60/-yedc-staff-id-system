@@ -482,7 +482,9 @@ def generate_id_request_form_pdf(record):
     }
 
     rendered_html = template.render(context)
-    output_pdf_path = DIRS["generated_pdfs"] / f"{record['emp_id']}_ID_Request_Form.pdf"
+    clean_name = re.sub(r'[^a-zA-Z0-9_-]', '_', record['full_name'])
+    clean_id = re.sub(r'[^a-zA-Z0-9_-]', '_', record['emp_id'])
+    output_pdf_path = DIRS["generated_pdfs"] / f"{clean_id}_{clean_name}_Request_Form.pdf"
     return convert_html_to_pdf(rendered_html, output_pdf_path, is_card=False)
 
 def generate_staff_master_pdf_report(records, region_filter="ALL"):
@@ -525,14 +527,15 @@ def image_to_base64(img_path):
     except Exception:
         return ""
 
-def create_pdf_zip_archive():
+def create_pdf_zip_archive(records=None):
+    if records is None:
+        records = fetch_all_staff()
     zip_buffer = io.BytesIO()
-    pdf_files = list(DIRS["generated_pdfs"].glob("*.pdf"))
-    if not pdf_files:
-        return None
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-        for pdf_path in pdf_files:
-            zip_file.write(pdf_path, arcname=pdf_path.name)
+        for r in records:
+            ok, pdf_path = generate_id_request_form_pdf(r)
+            if ok and os.path.exists(pdf_path):
+                zip_file.write(pdf_path, arcname=os.path.basename(pdf_path))
     zip_buffer.seek(0)
     return zip_buffer
 
@@ -1603,20 +1606,20 @@ elif selected_page == "⚙️ Batch Processing" and user_role in ["super_admin",
 
     st.divider()
 
-    st.markdown("##### 🖨️ PDF ID Card Batch Generation")
-    ready_records = fetch_ready_records(region_filter=user_region if not is_super_admin else st.session_state.admin_selected_region)
+    st.markdown("##### 📄 ID Card Request Forms Batch Processing")
+    ready_records = fetch_all_records(region_filter=user_region if not is_super_admin else st.session_state.admin_selected_region)
 
     if ready_records:
         st.dataframe(
             [
                 {
-                    "Employee ID": r["emp_id"],
+                    "Staff ID / Code": r["emp_id"],
                     "Full Name": r["full_name"],
                     "Department": "N/A" if r.get("category") in ["Intern", "NYSC"] else r.get("department", "Technical"),
                     "Role / Designation": r["category"] if r.get("category") in ["Intern", "NYSC"] else r.get("designation", "Staff"),
                     "Category": r["category"],
                     "Region": r.get("region", "Adamawa"),
-                    "Status": "Ready for PDF"
+                    "Status": "Ready for Request Form PDF"
                 }
                 for r in ready_records
             ],
@@ -1625,20 +1628,20 @@ elif selected_page == "⚙️ Batch Processing" and user_role in ["super_admin",
 
         p_col1, p_col2 = st.columns([1, 1])
         with p_col1:
-            if st.button("🖨️ Generate All PDF ID Cards (CR80 Standard)", type="primary", use_container_width=True):
+            if st.button("📄 Generate All Staff Request Form PDFs (1-Page A4)", type="primary", use_container_width=True):
                 pdf_success_count = 0
                 pdf_errors = []
 
-                with st.spinner("Rendering templates & generating PDFs..."):
+                with st.spinner("Generating official ID Request Form PDFs..."):
                     for record in ready_records:
-                        ok, res = generate_pdf_card(record)
+                        ok, res = generate_id_request_form_pdf(record)
                         if ok:
                             pdf_success_count += 1
                         else:
                             pdf_errors.append((record["emp_id"], res))
 
                 if pdf_success_count > 0:
-                    st.success(f"Generated {pdf_success_count} PDF ID Card(s) in `generated_pdfs/`!")
+                    st.success(f"Successfully generated {pdf_success_count} Request Form PDF(s) in `generated_pdfs/`!")
 
                 if pdf_errors:
                     st.error("Errors during PDF generation:")
@@ -1646,17 +1649,17 @@ elif selected_page == "⚙️ Batch Processing" and user_role in ["super_admin",
                         st.write(f"- **{eid}**: {err}")
 
         with p_col2:
-            zip_buf = create_pdf_zip_archive()
+            zip_buf = create_pdf_zip_archive(ready_records)
             if zip_buf:
                 st.download_button(
-                    label="📦 Download All PDFs as ZIP Archive",
+                    label="📦 Download All Request Forms (ZIP Archive)",
                     data=zip_buf,
-                    file_name="YEDC_Staff_ID_Cards.zip",
+                    file_name="YEDC_Staff_ID_Request_Forms.zip",
                     mime="application/zip",
                     use_container_width=True
                 )
     else:
-        st.info("No records are ready for PDF generation in this region.")
+        st.info("No staff records found for PDF generation in this region scope.")
 
 
 # ==========================================
@@ -1850,41 +1853,23 @@ elif selected_page == "🔍 Staff Directory" and user_role in ["super_admin", "r
                     
                     # 1. Download Official ID Card Request Form PDF (Fits 100% on 1 A4 Page)
                     ok_req, req_pdf_path = generate_id_request_form_pdf(staff)
+                    clean_name = re.sub(r'[^a-zA-Z0-9_-]', '_', staff['full_name'])
+                    clean_id = re.sub(r'[^a-zA-Z0-9_-]', '_', staff['emp_id'])
+                    
                     if ok_req and os.path.exists(req_pdf_path):
                         with open(req_pdf_path, "rb") as req_f:
                             st.download_button(
-                                label="📋 Download Request Form (1-Page A4 PDF)",
+                                label="📄 Download Request Form PDF",
                                 data=req_f,
-                                file_name=f"{staff['emp_id']}_ID_Card_Request_Form.pdf",
+                                file_name=f"{clean_id}_{clean_name}_Request_Form.pdf",
                                 mime="application/pdf",
                                 type="primary",
+                                use_container_width=True,
                                 key=f"dl_req_form_{staff['emp_id']}"
                             )
 
-                    # 2. CR80 Printable Badge Render / Download
-                    if st.button(f"🖨️ Render CR80 Badge PDF", key=f"btn_pdf_{staff['emp_id']}"):
-                        if staff["qr_path"] == "PENDING":
-                            st.warning("Upload QR code first for CR80 Badge.")
-                        else:
-                            ok, res = generate_pdf_card(staff)
-                            if ok:
-                                st.success("CR80 Badge Created!")
-                                st.rerun()
-                            else:
-                                st.error(f"Error: {res}")
-
-                    if pdf_abs.exists():
-                        with open(pdf_abs, "rb") as pdf_file:
-                            st.download_button(
-                                label="⬇️ Download CR80 Badge PDF",
-                                data=pdf_file,
-                                file_name=f"{staff['emp_id']}_CR80_Badge.pdf",
-                                mime="application/pdf",
-                                key=f"dl_{staff['emp_id']}"
-                            )
-
-                    # 3. Edit Record Action
-                    if st.button("✏️ Edit Record", key=f"btn_edit_{staff['emp_id']}"):
+                    # 2. Edit Record Action
+                    if st.button("✏️ Edit Record", key=f"btn_edit_{staff['emp_id']}", use_container_width=True):
                         st.session_state.editing_emp_id = staff["emp_id"]
                         st.session_state.scroll_to_top = True
                         st.rerun()
