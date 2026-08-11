@@ -1652,56 +1652,91 @@ elif selected_page == "⚙️ Batch Processing":
     st.markdown("##### 📄 ID Card Request Forms Batch Processing")
 
     if ready_records:
-        st.caption(f"Showing {len(ready_records)} record(s) matching selected region scope ({', '.join(selected_batch_regions)})")
-        st.dataframe(
-            [
-                {
-                    "Staff ID / Code": r["emp_id"],
-                    "Full Name": r["full_name"],
-                    "Department": "N/A" if r.get("category") in ["Intern", "NYSC"] else r.get("department", "Technical"),
-                    "Role / Designation": r["category"] if r.get("category") in ["Intern", "NYSC"] else r.get("designation", "Staff"),
-                    "Category": r["category"],
-                    "Region": r.get("region", "Adamawa"),
-                    "Status": "Ready for Request Form PDF"
-                }
-                for r in ready_records
-            ],
-            use_container_width=True
+        st.markdown("##### 🎯 Select Staff Members for Batch Export")
+        
+        btn_s1, btn_s2, _ = st.columns([1, 1, 3])
+        with btn_s1:
+            if st.button("☑️ Select All Staff", key="btn_batch_select_all", use_container_width=True):
+                st.session_state.selected_batch_staff_ids = [r["emp_id"] for r in ready_records]
+                st.rerun()
+        with btn_s2:
+            if st.button("☒ Deselect All", key="btn_batch_deselect_all", use_container_width=True):
+                st.session_state.selected_batch_staff_ids = []
+                st.rerun()
+
+        all_emp_ids = [r["emp_id"] for r in ready_records]
+        id_to_name = {r["emp_id"]: r["full_name"] for r in ready_records}
+
+        default_selected = st.session_state.get("selected_batch_staff_ids", all_emp_ids)
+        default_selected = [eid for eid in default_selected if eid in all_emp_ids]
+        if "selected_batch_staff_ids" not in st.session_state:
+            default_selected = all_emp_ids
+
+        selected_emp_ids = st.multiselect(
+            "Select Staff Members to Include in Batch Export (pick specific ones or leave all selected):",
+            options=all_emp_ids,
+            default=default_selected,
+            format_func=lambda eid: f"{eid} — {id_to_name.get(eid, '')}",
+            key="batch_staff_multiselect_input"
         )
+        st.session_state.selected_batch_staff_ids = selected_emp_ids
 
-        p_col1, p_col2 = st.columns([1, 1])
-        with p_col1:
-            if st.button("📄 Generate All Staff Request Form PDFs (1-Page A4)", type="primary", use_container_width=True):
-                pdf_success_count = 0
-                pdf_errors = []
+        records_to_process = [r for r in ready_records if r["emp_id"] in selected_emp_ids]
 
-                with st.spinner("Generating official ID Request Form PDFs..."):
-                    for record in ready_records:
-                        ok, res = generate_id_request_form_pdf(record)
-                        if ok:
-                            pdf_success_count += 1
-                        else:
-                            pdf_errors.append((record["emp_id"], res))
+        st.caption(f"✓ **{len(records_to_process)}** of **{len(ready_records)}** staff member(s) selected for PDF batch processing")
 
-                if pdf_success_count > 0:
-                    st.success(f"Successfully generated {pdf_success_count} Request Form PDF(s) in `generated_pdfs/`!")
+        if records_to_process:
+            st.dataframe(
+                [
+                    {
+                        "Staff ID / Code": r["emp_id"],
+                        "Full Name": r["full_name"],
+                        "Department": "N/A" if r.get("category") in ["Intern", "NYSC"] else r.get("department", "Technical"),
+                        "Role / Designation": r["category"] if r.get("category") in ["Intern", "NYSC"] else r.get("designation", "Staff"),
+                        "Category": r["category"],
+                        "Region": r.get("region", "Adamawa"),
+                        "Status": "Selected for Request Form PDF"
+                    }
+                    for r in records_to_process
+                ],
+                use_container_width=True
+            )
 
-                if pdf_errors:
-                    st.error("Errors during PDF generation:")
-                    for eid, err in pdf_errors:
-                        st.write(f"- **{eid}**: {err}")
+            p_col1, p_col2 = st.columns([1, 1])
+            with p_col1:
+                if st.button(f"📄 Generate Selected Request Form PDFs ({len(records_to_process)})", type="primary", use_container_width=True):
+                    pdf_success_count = 0
+                    pdf_errors = []
 
-        with p_col2:
-            zip_buf = create_pdf_zip_archive(ready_records)
-            if zip_buf:
-                zip_filename = f"YEDC_Staff_ID_Request_Forms_{'_'.join(selected_batch_regions)}.zip"
-                st.download_button(
-                    label=f"📦 Download Request Forms ZIP ({len(ready_records)} Files)",
-                    data=zip_buf,
-                    file_name=zip_filename,
-                    mime="application/zip",
-                    use_container_width=True
-                )
+                    with st.spinner("Generating official ID Request Form PDFs..."):
+                        for record in records_to_process:
+                            ok, res = generate_id_request_form_pdf(record)
+                            if ok:
+                                pdf_success_count += 1
+                            else:
+                                pdf_errors.append((record["emp_id"], res))
+
+                    if pdf_success_count > 0:
+                        st.success(f"Successfully generated {pdf_success_count} Request Form PDF(s) in `generated_pdfs/`!")
+
+                    if pdf_errors:
+                        st.error("Errors during PDF generation:")
+                        for eid, err in pdf_errors:
+                            st.write(f"- **{eid}**: {err}")
+
+            with p_col2:
+                zip_buf = create_pdf_zip_archive(records_to_process)
+                if zip_buf:
+                    zip_filename = f"YEDC_Staff_ID_Request_Forms_Selected_{len(records_to_process)}.zip"
+                    st.download_button(
+                        label=f"📦 Download Selected Request Forms ZIP ({len(records_to_process)} Files)",
+                        data=zip_buf,
+                        file_name=zip_filename,
+                        mime="application/zip",
+                        use_container_width=True
+                    )
+        else:
+            st.warning("⚠️ No staff members selected. Please select at least one staff member above to generate or download PDFs.")
     else:
         st.info("No staff records found for PDF generation in the selected region scope.")
 
