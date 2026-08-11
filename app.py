@@ -1227,7 +1227,7 @@ if selected_page == "📊 Dashboard":
 
     st.markdown("### System Metric Overview")
     
-    m1, m2, m3, m4 = st.columns(4)
+    m1, m2, m3 = st.columns(3)
     
     with m1:
         st.markdown(f"""
@@ -1246,14 +1246,6 @@ if selected_page == "📊 Dashboard":
         """, unsafe_allow_html=True)
 
     with m3:
-        st.markdown(f"""
-        <div class="metric-card-box">
-            <div class="metric-num" style="color: #7c3aed;">{pending_qr_count}</div>
-            <div class="metric-lbl">PENDING QR MATCHING</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with m4:
         st.markdown(f"""
         <div class="metric-card-box">
             <div class="metric-num" style="color: #059669;">{generated_pdfs_count}</div>
