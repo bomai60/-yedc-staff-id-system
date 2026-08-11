@@ -1569,43 +1569,7 @@ elif selected_page == "📝 Staff Register":
 # 9. PAGE 3: ADMIN BATCH PROCESSING (Admins Only)
 # ==========================================
 elif selected_page == "⚙️ Batch Processing" and user_role in ["super_admin", "regional_admin"]:
-    st.markdown(f"### Admin Batch QR Processing & PDF Generation ({user_region if not is_super_admin else st.session_state.admin_selected_region} Region)")
-
-    st.markdown("##### 📦 Batch Upload QR Codes (From External Department)")
-    st.caption("Upload QR Code image files named by Employee ID (e.g., `YEDC-1045.png`).")
-
-    qr_files = st.file_uploader(
-        "Upload Batch QR Code Image Files",
-        type=["png", "jpg", "jpeg"],
-        accept_multiple_files=True,
-        key="batch_qr_uploader"
-    )
-
-    if qr_files:
-        if st.button("🔄 Match Batch QR Codes", type="primary"):
-            updated_count = 0
-            not_found = []
-
-            for qr_file in qr_files:
-                file_stem = Path(qr_file.name).stem
-                save_filename = f"{file_stem}_qr{Path(qr_file.name).suffix}"
-                qr_rel_path = f"qr_codes/{save_filename}"
-                qr_abs_path = DIRS["qr_codes"] / save_filename
-
-                with open(qr_abs_path, "wb") as f:
-                    f.write(qr_file.getbuffer())
-
-                if update_qr_code(file_stem, qr_rel_path):
-                    updated_count += 1
-                else:
-                    not_found.append(file_stem)
-
-            st.success(f"Matched {updated_count} QR Code(s)!")
-            if not_found:
-                st.warning(f"No DB match for IDs: {', '.join(not_found)}")
-            st.rerun()
-
-    st.divider()
+    st.markdown(f"### Admin Batch PDF Request Forms Generation ({user_region if not is_super_admin else st.session_state.admin_selected_region} Region)")
 
     st.markdown("##### 📄 ID Card Request Forms Batch Processing")
     ready_records = fetch_all_records(region_filter=user_region if not is_super_admin else st.session_state.admin_selected_region)
@@ -1896,10 +1860,10 @@ elif selected_page == "📈 Reports & Analytics" and user_role in ["super_admin"
     rep_records = fetch_all_records(region_filter=rep_region_filter)
     total_staff = len(rep_records)
 
-    perm_count = sum(1 for r in rep_records if r["category"] == "Permanent")
-    contract_count = sum(1 for r in rep_records if r["category"] == "Contract")
-    intern_count = sum(1 for r in rep_records if r["category"] == "Intern")
-    nysc_count = sum(1 for r in rep_records if r["category"] == "NYSC")
+    perm_count = sum(1 for r in rep_records if str(r.get("category", "")).strip().lower() == "permanent")
+    contract_count = sum(1 for r in rep_records if str(r.get("category", "")).strip().lower() == "contract")
+    intern_count = sum(1 for r in rep_records if str(r.get("category", "")).strip().lower() == "intern")
+    nysc_count = sum(1 for r in rep_records if str(r.get("category", "")).strip().lower() == "nysc")
     ready_count = sum(1 for r in rep_records if r["qr_path"] != "PENDING")
 
     nysc_card_html = f'<img src="{nysc_logo_b64}" class="nysc-icon-img"> NYSC MEMBERS' if nysc_logo_b64 else '🎖️ NYSC MEMBERS'
