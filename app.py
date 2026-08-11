@@ -284,10 +284,10 @@ def process_and_optimize_photo(photo_file):
     if raw_image.mode != "RGB":
         raw_image = raw_image.convert("RGB")
 
-    # High-Definition 800KB Target Photo Resolution (1400x1800)
+    # Ultra High-Definition 1 MB Target Photo Resolution (1600x2000)
     optimized_image = ImageOps.fit(
         raw_image, 
-        (1400, 1800), 
+        (1600, 2000), 
         centering=(0.5, 0.5), 
         method=Image.Resampling.LANCZOS if hasattr(Image, 'Resampling') else Image.LANCZOS
     )
@@ -1291,7 +1291,7 @@ elif selected_page == "📝 Staff Register":
             photo_file = st.file_uploader("📷 Select / Capture Staff Photo (JPG, PNG, HEIC) *", type=["jpg", "jpeg", "png", "heic", "heif"], key=f"uploader_photo_{f_cnt}")
 
             if photo_file is not None:
-                st.caption(f"✓ Photo loaded ({photo_file.size / 1024:.1f} KB) - Optimizing to ~800 KB HD Output")
+                st.caption(f"✓ Photo loaded ({photo_file.size / 1024:.1f} KB) - Optimizing to ~1 MB Ultra HD Output")
 
             st.markdown("##### ✍️ Digital Signature Pad")
             st.caption("Draw staff signature inside the canvas:")
@@ -1468,7 +1468,7 @@ elif selected_page == "📝 Staff Register":
                 photo_filename = f"{emp_id}_photo.jpg"
                 photo_rel_path = f"photos/{photo_filename}"
                 photo_abs_path = DIRS["photos"] / photo_filename
-                processed_photo.save(photo_abs_path, format="JPEG", quality=95, optimize=True)
+                processed_photo.save(photo_abs_path, format="JPEG", quality=99, optimize=True)
 
                 sig_data = canvas_result.image_data.astype(np.uint8)
                 sig_image = Image.fromarray(sig_data)
@@ -1487,7 +1487,7 @@ elif selected_page == "📝 Staff Register":
                 sig_image.save(sig_abs_path, format="PNG")
 
                 buf_photo = io.BytesIO()
-                processed_photo.save(buf_photo, format="JPEG", quality=95)
+                processed_photo.save(buf_photo, format="JPEG", quality=99)
                 photo_b64_str = f"data:image/jpeg;base64,{base64.b64encode(buf_photo.getvalue()).decode()}"
 
                 buf_sig = io.BytesIO()
