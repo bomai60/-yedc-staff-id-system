@@ -1116,8 +1116,8 @@ if st.session_state.get("scroll_to_top"):
 if "current_page" not in st.session_state:
     st.session_state.current_page = "📊 Dashboard"
 
-# Security Enforcement for Enrollment Assistants (Strictly Dashboard & Staff Register)
-if is_enrollment_assistant and st.session_state.current_page not in ["📊 Dashboard", "📝 Staff Register"]:
+# Security Enforcement for Enrollment Assistants (Dashboard, Staff Register & Batch Processing)
+if is_enrollment_assistant and st.session_state.current_page not in ["📊 Dashboard", "📝 Staff Register", "⚙️ Batch Processing"]:
     st.session_state.current_page = "📊 Dashboard"
 
 with st.sidebar:
@@ -1144,10 +1144,10 @@ with st.sidebar:
     # Allowed for all roles (Super Admin, Regional Admin, Enrollment Assistant)
     nav_item("📊 Dashboard", "btn_nav_dash")
     nav_item("📝 Staff Register", "btn_nav_reg")
+    nav_item("⚙️ Batch Processing", "btn_nav_batch")
     
     # Restricted from Enrollment Assistants (Admins only)
     if user_role in ["super_admin", "regional_admin"]:
-        nav_item("⚙️ Batch Processing", "btn_nav_batch")
         nav_item("🔍 Staff Directory", "btn_nav_dir")
         nav_item("📈 Reports & Analytics", "btn_nav_rep")
     
@@ -1622,15 +1622,37 @@ elif selected_page == "📝 Staff Register":
 
 
 # ==========================================
-# 9. PAGE 3: ADMIN BATCH PROCESSING (Admins Only)
+# 9. PAGE 3: BATCH PROCESSING
 # ==========================================
-elif selected_page == "⚙️ Batch Processing" and user_role in ["super_admin", "regional_admin"]:
-    st.markdown(f"### Admin Batch PDF Request Forms Generation ({user_region if not is_super_admin else st.session_state.admin_selected_region} Region)")
+elif selected_page == "⚙️ Batch Processing":
+    if is_super_admin:
+        b_col1, b_col2 = st.columns([2.5, 1])
+        with b_col1:
+            selected_batch_regions = st.multiselect(
+                "Filter Batch by Region(s) (Select 1, 2, 3, or all 4):",
+                REGIONS,
+                default=st.session_state.get("batch_selected_regions", REGIONS),
+                key="batch_region_multiselect_input"
+            )
+            if not selected_batch_regions:
+                selected_batch_regions = REGIONS
+                st.caption("⚠️ No region selected — defaulting to ALL regions.")
+            st.session_state.batch_selected_regions = selected_batch_regions
+            
+        region_header_str = ", ".join(selected_batch_regions) if len(selected_batch_regions) < len(REGIONS) else "ALL REGIONS"
+        st.markdown(f"### Batch PDF Request Forms Generation ({region_header_str})")
+        all_records = fetch_all_records("ALL")
+        ready_records = [r for r in all_records if r.get("region", "Adamawa") in selected_batch_regions]
+    else:
+        selected_batch_regions = [user_region]
+        st.markdown(f"### Batch PDF Request Forms Generation ({user_region} Region)")
+        st.info(f"📍 Showing batch records strictly scoped for **{user_region}** Region.")
+        ready_records = fetch_all_records(region_filter=user_region)
 
     st.markdown("##### 📄 ID Card Request Forms Batch Processing")
-    ready_records = fetch_all_records(region_filter=user_region if not is_super_admin else st.session_state.admin_selected_region)
 
     if ready_records:
+        st.caption(f"Showing {len(ready_records)} record(s) matching selected region scope ({', '.join(selected_batch_regions)})")
         st.dataframe(
             [
                 {
@@ -1672,15 +1694,16 @@ elif selected_page == "⚙️ Batch Processing" and user_role in ["super_admin",
         with p_col2:
             zip_buf = create_pdf_zip_archive(ready_records)
             if zip_buf:
+                zip_filename = f"YEDC_Staff_ID_Request_Forms_{'_'.join(selected_batch_regions)}.zip"
                 st.download_button(
-                    label="📦 Download All Request Forms (ZIP Archive)",
+                    label=f"📦 Download Request Forms ZIP ({len(ready_records)} Files)",
                     data=zip_buf,
-                    file_name="YEDC_Staff_ID_Request_Forms.zip",
+                    file_name=zip_filename,
                     mime="application/zip",
                     use_container_width=True
                 )
     else:
-        st.info("No staff records found for PDF generation in this region scope.")
+        st.info("No staff records found for PDF generation in the selected region scope.")
 
 
 # ==========================================
