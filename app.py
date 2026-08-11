@@ -1653,55 +1653,73 @@ elif selected_page == "⚙️ Batch Processing":
 
     if ready_records:
         st.markdown("##### 🎯 Select Staff Members for Batch Export")
+        st.caption("Check or uncheck individual checkboxes directly in the table below to select which staff members to include:")
         
         btn_s1, btn_s2, _ = st.columns([1, 1, 3])
         with btn_s1:
             if st.button("☑️ Select All Staff", key="btn_batch_select_all", use_container_width=True):
-                st.session_state.selected_batch_staff_ids = [r["emp_id"] for r in ready_records]
+                st.session_state.batch_select_all_flag = True
+                st.session_state.batch_deselect_all_flag = False
                 st.rerun()
         with btn_s2:
             if st.button("☒ Deselect All", key="btn_batch_deselect_all", use_container_width=True):
-                st.session_state.selected_batch_staff_ids = []
+                st.session_state.batch_deselect_all_flag = True
+                st.session_state.batch_select_all_flag = False
                 st.rerun()
 
         all_emp_ids = [r["emp_id"] for r in ready_records]
-        id_to_name = {r["emp_id"]: r["full_name"] for r in ready_records}
 
-        default_selected = st.session_state.get("selected_batch_staff_ids", all_emp_ids)
-        default_selected = [eid for eid in default_selected if eid in all_emp_ids]
+        # Handle Select All / Deselect All overrides
+        if st.session_state.get("batch_select_all_flag"):
+            st.session_state.selected_batch_staff_ids = all_emp_ids
+            st.session_state.batch_select_all_flag = False
+        elif st.session_state.get("batch_deselect_all_flag"):
+            st.session_state.selected_batch_staff_ids = []
+            st.session_state.batch_deselect_all_flag = False
+
         if "selected_batch_staff_ids" not in st.session_state:
-            default_selected = all_emp_ids
+            st.session_state.selected_batch_staff_ids = all_emp_ids
 
-        selected_emp_ids = st.multiselect(
-            "Select Staff Members to Include in Batch Export (pick specific ones or leave all selected):",
-            options=all_emp_ids,
-            default=default_selected,
-            format_func=lambda eid: f"{eid} — {id_to_name.get(eid, '')}",
-            key="batch_staff_multiselect_input"
+        currently_selected = set(st.session_state.get("selected_batch_staff_ids", all_emp_ids))
+
+        df_batch_data = pd.DataFrame([
+            {
+                "Select": r["emp_id"] in currently_selected,
+                "Staff ID / Code": r["emp_id"],
+                "Full Name": r["full_name"],
+                "Department": "N/A" if r.get("category") in ["Intern", "NYSC"] else r.get("department", "Technical"),
+                "Role / Designation": r["category"] if r.get("category") in ["Intern", "NYSC"] else r.get("designation", "Staff"),
+                "Category": r["category"],
+                "Region": r.get("region", "Adamawa"),
+                "Status": "Ready for Request Form PDF"
+            }
+            for r in ready_records
+        ])
+
+        edited_batch_df = st.data_editor(
+            df_batch_data,
+            column_config={
+                "Select": st.column_config.CheckboxColumn(
+                    "Select",
+                    help="Check to include this staff member in PDF batch export",
+                    default=True
+                )
+            },
+            disabled=["Staff ID / Code", "Full Name", "Department", "Role / Designation", "Category", "Region", "Status"],
+            hide_index=True,
+            use_container_width=True,
+            key="batch_interactive_data_editor"
         )
-        st.session_state.selected_batch_staff_ids = selected_emp_ids
+
+        selected_rows = edited_batch_df[edited_batch_df["Select"] == True]
+        selected_emp_ids = set(selected_rows["Staff ID / Code"])
+        st.session_state.selected_batch_staff_ids = list(selected_emp_ids)
 
         records_to_process = [r for r in ready_records if r["emp_id"] in selected_emp_ids]
 
         st.caption(f"✓ **{len(records_to_process)}** of **{len(ready_records)}** staff member(s) selected for PDF batch processing")
 
         if records_to_process:
-            st.dataframe(
-                [
-                    {
-                        "Staff ID / Code": r["emp_id"],
-                        "Full Name": r["full_name"],
-                        "Department": "N/A" if r.get("category") in ["Intern", "NYSC"] else r.get("department", "Technical"),
-                        "Role / Designation": r["category"] if r.get("category") in ["Intern", "NYSC"] else r.get("designation", "Staff"),
-                        "Category": r["category"],
-                        "Region": r.get("region", "Adamawa"),
-                        "Status": "Selected for Request Form PDF"
-                    }
-                    for r in records_to_process
-                ],
-                use_container_width=True
-            )
-
             p_col1, p_col2 = st.columns([1, 1])
             with p_col1:
                 if st.button(f"📄 Generate Selected Request Form PDFs ({len(records_to_process)})", type="primary", use_container_width=True):
@@ -1736,7 +1754,7 @@ elif selected_page == "⚙️ Batch Processing":
                         use_container_width=True
                     )
         else:
-            st.warning("⚠️ No staff members selected. Please select at least one staff member above to generate or download PDFs.")
+            st.warning("⚠️ No staff members selected. Please check at least one staff member checkbox in the table above to generate or download PDFs.")
     else:
         st.info("No staff records found for PDF generation in the selected region scope.")
 
