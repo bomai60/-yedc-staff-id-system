@@ -1299,7 +1299,7 @@ elif selected_page == "📝 Staff Register":
         reg_cat_key = f"inp_cat_{f_cnt}"
         category = st.selectbox("Staff Category *", ["Permanent", "Contract", "Intern", "NYSC"], key=reg_cat_key)
 
-        with st.form(f"staff_capture_form_{f_cnt}", clear_on_submit=True):
+        with st.form(f"staff_capture_form_{f_cnt}", clear_on_submit=False):
             f_col1, f_col2 = st.columns(2)
             with f_col1:
                 if category == "NYSC":
