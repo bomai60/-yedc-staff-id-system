@@ -274,6 +274,53 @@ def delete_staff_record(emp_id):
 # ==========================================
 # 3. HELPER UTILITIES & IMAGE / DUAL PDF RENDERER (WKHTMLTOPDF + XHTML2PDF FALLBACK)
 # ==========================================
+def validate_white_background(photo_input, min_rgb=200, max_diff=35, required_ratio=0.70):
+    """
+    Validates whether an input photo has a plain white background.
+    Samples top-left and top-right corners of the photo.
+    Returns (bool, str).
+    """
+    try:
+        if isinstance(photo_input, Image.Image):
+            img = photo_input.copy()
+        else:
+            img = Image.open(photo_input)
+            
+        try:
+            img = ImageOps.exif_transpose(img)
+        except Exception:
+            pass
+            
+        if img.mode != "RGB":
+            img = img.convert("RGB")
+            
+        arr = np.array(img)
+        h, w, _ = arr.shape
+        
+        # Sample top-left and top-right corner patches (top 15% height, left/right 15% width)
+        h_crop = max(1, int(h * 0.15))
+        w_crop = max(1, int(w * 0.15))
+        
+        top_left = arr[0:h_crop, 0:w_crop]
+        top_right = arr[0:h_crop, w-w_crop:w]
+        
+        corner_pixels = np.vstack((top_left.reshape(-1, 3), top_right.reshape(-1, 3)))
+        
+        r, g, b = corner_pixels[:, 0], corner_pixels[:, 1], corner_pixels[:, 2]
+        is_bright = (r >= min_rgb) & (g >= min_rgb) & (b >= min_rgb)
+        color_range = np.maximum(r, np.maximum(g, b)) - np.minimum(r, np.minimum(g, b))
+        is_neutral = color_range <= max_diff
+        
+        white_pixels = is_bright & is_neutral
+        white_ratio = np.mean(white_pixels)
+        
+        if white_ratio >= required_ratio:
+            return True, "White background verified."
+        else:
+            return False, f"Photo background is not white ({white_ratio*100:.1f}% white detected). Only photos with a plain white background are accepted."
+    except Exception as e:
+        return False, f"Could not analyze image background: {str(e)}"
+
 def process_and_optimize_photo(photo_file):
     raw_image = Image.open(photo_file)
     try:
@@ -1287,11 +1334,16 @@ elif selected_page == "📝 Staff Register":
 
             st.markdown("##### 📷 Staff Photo Capture")
             st.caption("Click below to select a photo file or open your device's native camera window:")
+            st.caption("⚠️ **Requirement:** Only photos with a **plain white background** are accepted. Non-white backgrounds will be rejected.")
 
             photo_file = st.file_uploader("📷 Select / Capture Staff Photo (JPG, PNG, HEIC) *", type=["jpg", "jpeg", "png", "heic", "heif"], key=f"uploader_photo_{f_cnt}")
 
             if photo_file is not None:
-                st.caption(f"✓ Photo loaded ({photo_file.size / 1024:.1f} KB) - Optimizing to ~1 MB Ultra HD Output")
+                is_bg_valid, bg_msg = validate_white_background(photo_file)
+                if not is_bg_valid:
+                    st.error(f"❌ Photo Rejected: {bg_msg}")
+                else:
+                    st.caption(f"✓ Photo loaded ({photo_file.size / 1024:.1f} KB) - White Background Verified")
 
             st.markdown("##### ✍️ Digital Signature Pad")
             st.caption("Draw staff signature inside the canvas:")
@@ -1463,7 +1515,11 @@ elif selected_page == "📝 Staff Register":
             st.error("Please sign on signature pad.")
         else:
             try:
-                processed_photo = process_and_optimize_photo(photo_file)
+                is_bg_valid, bg_msg = validate_white_background(photo_file)
+                if not is_bg_valid:
+                    st.error(f"❌ Registration Rejected: {bg_msg}")
+                else:
+                    processed_photo = process_and_optimize_photo(photo_file)
 
                 photo_filename = f"{emp_id}_photo.jpg"
                 photo_rel_path = f"photos/{photo_filename}"
@@ -1733,6 +1789,10 @@ elif selected_page == "🔍 Staff Directory" and user_role in ["super_admin", "r
                         try:
                             updated_photo_rel = None
                             if new_photo is not None:
+                                is_bg_valid, bg_msg = validate_white_background(new_photo)
+                                if not is_bg_valid:
+                                    st.error(f"❌ Photo Update Rejected: {bg_msg}")
+                                    st.stop()
                                 opt_p = process_and_optimize_photo(new_photo)
                                 p_fname = f"{target_staff['emp_id']}_photo.jpg"
                                 p_abs = DIRS["photos"] / p_fname
