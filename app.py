@@ -1,5 +1,6 @@
 import os
 import io
+import re
 import zipfile
 import sqlite3
 import base64
@@ -1493,7 +1494,7 @@ elif selected_page == "📝 Staff Register":
                 sig_image.save(buf_sig, format="PNG")
                 sig_b64_str = f"data:image/png;base64,{base64.b64encode(buf_sig.getvalue()).decode()}"
 
-                qr_rel_path = auto_generate_staff_qr(emp_id, full_name, category, staff_region)
+                qr_rel_path = "NOT_REQUIRED"
 
                 success, msg = insert_staff_record(
                     emp_id=emp_id,
@@ -1508,7 +1509,7 @@ elif selected_page == "📝 Staff Register":
                 )
 
                 if success:
-                    # Pre-generate CR80 PDF ID card immediately
+                    # Pre-generate official A4 ID Card Request Form PDF immediately
                     new_record = {
                         "emp_id": emp_id,
                         "full_name": full_name,
@@ -1520,7 +1521,7 @@ elif selected_page == "📝 Staff Register":
                         "signature_path": sig_rel_path,
                         "qr_path": qr_rel_path
                     }
-                    generate_pdf_card(new_record)
+                    generate_id_request_form_pdf(new_record)
 
                     st.session_state.form_saved_success = True
                     st.session_state.saved_emp_id = emp_id
@@ -1820,35 +1821,26 @@ elif selected_page == "🔍 Staff Directory" and user_role in ["super_admin", "r
             display_dept_label = "N/A" if staff.get('category') in ['Intern', 'NYSC'] else staff.get('department', 'Technical')
             display_desig_label = staff.get('category') if staff.get('category') in ['Intern', 'NYSC'] else staff.get('designation', 'Staff Member')
             with st.expander(f"🪪 **{staff['emp_id']}** - {staff['full_name']} (Role: {display_desig_label} | Dept: {display_dept_label} - {staff['category']} - {staff.get('region', 'Adamawa')})"):
-                c1, c2, c3, c4 = st.columns([1, 1, 1, 1.2])
+                c1, c2, c3 = st.columns([1.2, 1.2, 1.6])
 
                 photo_abs = BASE_DIR / staff["photo_path"]
                 sig_abs = BASE_DIR / staff["signature_path"]
-                qr_abs = BASE_DIR / staff["qr_path"] if staff["qr_path"] != "PENDING" else None
-                pdf_abs = DIRS["generated_pdfs"] / f"{staff['emp_id']}_ID_Card.pdf"
 
                 with c1:
                     st.markdown("**Staff Photo**")
                     if photo_abs.exists():
-                        st.image(str(photo_abs), width=95)
+                        st.image(str(photo_abs), width=105)
                     else:
                         st.caption("Missing")
 
                 with c2:
                     st.markdown("**Signature**")
                     if sig_abs.exists():
-                        st.image(str(sig_abs), width=110)
+                        st.image(str(sig_abs), width=120)
                     else:
                         st.caption("Missing")
 
                 with c3:
-                    st.markdown("**QR Code**")
-                    if qr_abs and qr_abs.exists():
-                        st.image(str(qr_abs), width=95)
-                    else:
-                        st.markdown('<div class="pending-badge">PENDING</div>', unsafe_allow_html=True)
-
-                with c4:
                     st.markdown("**Actions**")
                     
                     # 1. Download Official ID Card Request Form PDF (Fits 100% on 1 A4 Page)
