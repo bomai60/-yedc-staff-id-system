@@ -283,9 +283,10 @@ def process_and_optimize_photo(photo_file):
     if raw_image.mode != "RGB":
         raw_image = raw_image.convert("RGB")
 
+    # High-Definition 800KB Target Photo Resolution (1400x1800)
     optimized_image = ImageOps.fit(
         raw_image, 
-        (1200, 1600), 
+        (1400, 1800), 
         centering=(0.5, 0.5), 
         method=Image.Resampling.LANCZOS if hasattr(Image, 'Resampling') else Image.LANCZOS
     )
@@ -1250,20 +1251,24 @@ elif selected_page == "📝 Staff Register":
         with st.form(f"staff_capture_form_{f_cnt}", clear_on_submit=True):
             f_col1, f_col2 = st.columns(2)
             with f_col1:
-                emp_id = st.text_input("Employee ID *", placeholder="e.g. YEDC-1045", key=f"inp_emp_{f_cnt}").strip()
+                if category == "NYSC":
+                    emp_id = st.text_input("State Code / Call-Up No *", placeholder="e.g. AD/23B/1045", key=f"inp_emp_{f_cnt}").strip()
+                elif category == "Intern":
+                    emp_id = st.text_input("Intern / Student ID *", placeholder="e.g. INT-2026-045", key=f"inp_emp_{f_cnt}").strip()
+                else:
+                    emp_id = st.text_input("Employee Staff ID *", placeholder="e.g. YEDC-1045", key=f"inp_emp_{f_cnt}").strip()
+
                 full_name = st.text_input("Full Name *", placeholder="e.g. John Doe", key=f"inp_name_{f_cnt}").strip()
                 
             with f_col2:
                 if category == "Intern":
                     st.text_input("Role / Designation", value="Intern", disabled=True, key=f"inp_desig_dis_{f_cnt}")
-                    st.text_input("Department", value="N/A", disabled=True, key=f"inp_dept_dis_{f_cnt}")
+                    dept_input = st.selectbox("Assigned Department / Unit *", DEPARTMENTS, key=f"inp_dept_{f_cnt}")
                     designation = "Intern"
-                    dept_input = "N/A"
                 elif category == "NYSC":
-                    st.text_input("Role / Designation", value="NYSC", disabled=True, key=f"inp_desig_dis_{f_cnt}")
-                    st.text_input("Department", value="N/A", disabled=True, key=f"inp_dept_dis_{f_cnt}")
-                    designation = "NYSC"
-                    dept_input = "N/A"
+                    st.text_input("Role / Designation", value="NYSC Corper", disabled=True, key=f"inp_desig_dis_{f_cnt}")
+                    dept_input = st.selectbox("PPA Department / Unit *", DEPARTMENTS, key=f"inp_dept_{f_cnt}")
+                    designation = "NYSC Corper"
                 else:
                     desig_input = st.text_input("Role / Designation *", value="", placeholder="e.g. Linesman", key=f"inp_desig_{f_cnt}").strip()
                     designation = desig_input if desig_input else "Staff Member"
@@ -1276,19 +1281,13 @@ elif selected_page == "📝 Staff Register":
                 staff_region = user_region
                 st.text_input("Assigned Region", value=user_region, disabled=True, key=f"inp_reg_dis_{f_cnt}")
 
-            st.markdown("##### 📷 Staff Photo")
-            st.caption("Upload passport photo file OR take photo directly using camera:")
+            st.markdown("##### 📷 Staff Photo Capture")
+            st.caption("Click below to select a photo file or open your device's native camera window:")
 
-            p_col1, p_col2 = st.columns(2)
-            with p_col1:
-                uploaded_photo_file = st.file_uploader("Upload Passport Photo (JPG / PNG / HEIC) *", type=["jpg", "jpeg", "png", "heic", "heif"], key=f"uploader_photo_{f_cnt}")
-            with p_col2:
-                captured_photo_file = st.camera_input("Take Photo using Camera *", key=f"cam_photo_{f_cnt}")
-
-            photo_file = uploaded_photo_file if uploaded_photo_file is not None else captured_photo_file
+            photo_file = st.file_uploader("📷 Select / Capture Staff Photo (JPG, PNG, HEIC) *", type=["jpg", "jpeg", "png", "heic", "heif"], key=f"uploader_photo_{f_cnt}")
 
             if photo_file is not None:
-                st.caption(f"✓ Original file size: {photo_file.size / (1024*1024):.2f} MB (Optimizing to ~600 KB HD Output)")
+                st.caption(f"✓ Photo loaded ({photo_file.size / 1024:.1f} KB) - Optimizing to ~800 KB HD Output")
 
             st.markdown("##### ✍️ Digital Signature Pad")
             st.caption("Draw staff signature inside the canvas:")
