@@ -6,7 +6,7 @@
     <style>
         @page {
             size: A4 portrait;
-            margin: 10mm 14mm;
+            margin: 8mm 12mm;
         }
         * {
             box-sizing: border-box;
@@ -17,28 +17,28 @@
         }
         body {
             background: #ffffff;
-            font-size: 10.5pt;
-            padding: 5px;
+            font-size: 9.5pt;
+            padding: 2px;
         }
         .header-table {
             width: 100%;
             border-bottom: 2px solid #0c1a40;
-            padding-bottom: 8px;
-            margin-bottom: 12px;
+            padding-bottom: 4px;
+            margin-bottom: 8px;
         }
         .logo-img {
-            max-height: 52px;
+            max-height: 38px;
             width: auto;
         }
         .header-title-main {
-            font-size: 13pt;
+            font-size: 11.5pt;
             font-weight: bold;
             color: #0c1a40;
             text-align: right;
-            margin-bottom: 3px;
+            margin-bottom: 2px;
         }
         .header-title-sub {
-            font-size: 11pt;
+            font-size: 9.5pt;
             font-weight: bold;
             color: #334155;
             text-align: right;
@@ -48,73 +48,73 @@
         .category-banner {
             background-color: #0c1a40;
             color: #ffffff;
-            font-size: 12pt;
+            font-size: 10pt;
             font-weight: 900;
             text-align: center;
-            padding: 6px 12px;
+            padding: 4px 8px;
             border-radius: 4px;
-            letter-spacing: 1px;
-            margin-bottom: 18px;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
             text-transform: uppercase;
         }
 
         .photo-container {
-            margin-bottom: 18px;
+            margin-bottom: 10px;
             margin-left: 2px;
         }
         .photo-img {
-            width: 125px;
-            height: 155px;
+            width: 100px;
+            height: 125px;
             object-fit: cover;
             border: 2px solid #0c1a40;
             border-radius: 4px;
         }
 
         .field-row {
-            margin-bottom: 18px;
-            font-size: 11pt;
-            line-height: 1.4;
+            margin-bottom: 9px;
+            font-size: 9.5pt;
+            line-height: 1.3;
         }
         .field-label {
             font-weight: bold;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             display: inline-block;
-            min-width: 160px;
+            min-width: 150px;
             color: #0c1a40;
         }
         .dots-line {
             display: inline-block;
             border-bottom: 1.5px dotted #334155;
-            padding-bottom: 2px;
-            padding-left: 8px;
-            padding-right: 8px;
+            padding-bottom: 1px;
+            padding-left: 6px;
+            padding-right: 6px;
             font-weight: bold;
-            font-size: 11.5pt;
+            font-size: 10pt;
             color: #0c1a40;
             text-transform: uppercase;
         }
 
         .purpose-box {
-            margin-top: 20px;
-            margin-bottom: 18px;
-            font-size: 10.5pt;
+            margin-top: 10px;
+            margin-bottom: 10px;
+            font-size: 9.5pt;
         }
         .purpose-option {
             display: inline-block;
-            margin-right: 28px;
+            margin-right: 20px;
             font-weight: bold;
         }
         .checkbox-sq {
             display: inline-block;
-            width: 14px;
-            height: 14px;
+            width: 13px;
+            height: 13px;
             border: 1.5px solid #0c1a40;
-            margin-right: 6px;
+            margin-right: 5px;
             vertical-align: middle;
             text-align: center;
-            line-height: 12px;
-            font-size: 10px;
+            line-height: 11px;
+            font-size: 9px;
         }
         .checkbox-sq.checked {
             background: #0c1a40;
@@ -122,30 +122,30 @@
         }
 
         .signature-section {
-            margin-top: 24px;
+            margin-top: 12px;
         }
         .sig-container {
             display: inline-block;
             vertical-align: bottom;
             border-bottom: 1.5px dotted #334155;
-            min-width: 280px;
-            min-height: 28px;
-            padding-left: 8px;
+            min-width: 240px;
+            min-height: 22px;
+            padding-left: 6px;
         }
         .sig-img {
-            max-height: 28px;
-            max-width: 150px;
+            max-height: 22px;
+            max-width: 120px;
             display: block;
             margin-bottom: -1px;
         }
 
         .badge-cat {
             display: inline-block;
-            padding: 3px 10px;
+            padding: 2px 8px;
             background-color: #ff5522;
             color: #ffffff;
             font-weight: bold;
-            font-size: 10.5pt;
+            font-size: 9.5pt;
             border-radius: 3px;
         }
     </style>
@@ -155,14 +155,14 @@
     <!-- Header Section matching YEDC Document -->
     <table class="header-table">
         <tr>
-            <td style="width: 40%; vertical-align: middle;">
+            <td style="width: 35%; vertical-align: middle;">
                 {% if logo_path %}
                 <img src="{{ logo_path }}" class="logo-img" alt="YEDC Logo">
                 {% else %}
-                <div style="font-weight: bold; font-size: 16pt; color: #0c1a40;">YEDC</div>
+                <div style="font-weight: bold; font-size: 14pt; color: #0c1a40;">YEDC</div>
                 {% endif %}
             </td>
-            <td style="width: 60%; vertical-align: middle;">
+            <td style="width: 65%; vertical-align: middle;">
                 <div class="header-title-main">YOLA ELECTRICITY DISTRIBUTION COMPANY</div>
                 <div class="header-title-sub">Human Resource Management - ID Card Request Form</div>
             </td>
@@ -191,34 +191,34 @@
 
     <div class="field-row">
         <span class="field-label">STAFF FULL NAME:</span>
-        <span class="dots-line" style="min-width: 400px;">{{ full_name }}</span>
+        <span class="dots-line" style="min-width: 380px;">{{ full_name }}</span>
     </div>
 
     <div class="field-row">
         <span class="field-label">STAFF ID / NO:</span>
         <span style="font-weight: bold;">(</span>
-        <span class="dots-line" style="min-width: 240px;">{{ emp_id }}</span>
+        <span class="dots-line" style="min-width: 220px;">{{ emp_id }}</span>
         <span style="font-weight: bold;">)</span>
     </div>
 
     <div class="field-row">
         <span class="field-label">DEPARTMENT / UNIT:</span>
-        <span class="dots-line" style="min-width: 400px;">{{ department }}</span>
+        <span class="dots-line" style="min-width: 380px;">{{ department }}</span>
     </div>
 
     <div class="field-row">
         <span class="field-label">ROLE / DESIGNATION:</span>
-        <span class="dots-line" style="min-width: 400px;">{{ designation }}</span>
+        <span class="dots-line" style="min-width: 380px;">{{ designation }}</span>
     </div>
 
     <div class="field-row">
         <span class="field-label">ASSIGNED REGION:</span>
-        <span class="dots-line" style="min-width: 400px;">{{ region }}</span>
+        <span class="dots-line" style="min-width: 380px;">{{ region }}</span>
     </div>
 
     <!-- Purpose of Request -->
     <div class="purpose-box">
-        <span class="field-label" style="min-width: 180px;">PURPOSE OF REQUEST:</span>
+        <span class="field-label" style="min-width: 160px;">PURPOSE OF REQUEST:</span>
         <span class="purpose-option">
             <span class="checkbox-sq checked">✓</span> New Enrollment
         </span>
@@ -233,17 +233,17 @@
     <!-- Dates -->
     <div class="field-row">
         <span class="field-label">DATE OF REQUEST:</span>
-        <span class="dots-line" style="min-width: 400px;">{{ date_of_request }}</span>
+        <span class="dots-line" style="min-width: 380px;">{{ date_of_request }}</span>
     </div>
 
     <div class="field-row">
         <span class="field-label">EXPECTED ISSUE DATE:</span>
-        <span class="dots-line" style="min-width: 400px;">{{ expected_date }}</span>
+        <span class="dots-line" style="min-width: 380px;">{{ expected_date }}</span>
     </div>
 
     <!-- Signatures -->
     <div class="signature-section">
-        <div class="field-row" style="margin-bottom: 20px;">
+        <div class="field-row" style="margin-bottom: 12px;">
             <span class="field-label" style="vertical-align: bottom;">STAFF SIGNATURE:</span>
             <div class="sig-container">
                 {% if signature_path %}
@@ -257,7 +257,7 @@
         <div class="field-row">
             <span class="field-label" style="vertical-align: bottom;">HR VERIFICATION:</span>
             <div class="sig-container">
-                <span style="font-family: 'Brush Script MT', cursive, sans-serif; font-size: 13pt; color: #0c1a40; font-weight: bold; line-height: 28px;">YEDC HR Verified</span>
+                <span style="font-family: 'Brush Script MT', cursive, sans-serif; font-size: 11pt; color: #0c1a40; font-weight: bold; line-height: 22px;">YEDC HR Verified</span>
             </div>
         </div>
     </div>
