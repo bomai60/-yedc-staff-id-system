@@ -106,6 +106,20 @@ def init_db():
         )
     """)
     
+    # 3. Audit Logs table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS audit_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT NOT NULL,
+            username TEXT NOT NULL,
+            role TEXT NOT NULL,
+            action TEXT NOT NULL,
+            target_id TEXT,
+            details TEXT NOT NULL,
+            region TEXT NOT NULL
+        )
+    """)
+    
     # Seed default accounts if empty
     cursor.execute("SELECT COUNT(*) FROM users")
     if cursor.fetchone()[0] == 0:
@@ -148,6 +162,57 @@ def init_db():
 
 init_db()
 
+# ==========================================
+# AUDIT LOGGING HELPER FUNCTIONS
+# ==========================================
+def log_audit_event(action: str, target_id: str = None, details: str = "", region: str = None, username: str = None, role: str = None):
+    """Log user or system activity to audit_logs database table."""
+    try:
+        if not username or not role or not region:
+            user_session = getattr(st, 'session_state', {}).get('user')
+            if user_session:
+                username = username or user_session.get('username', 'SYSTEM')
+                role = role or user_session.get('role', 'system')
+                region = region or user_session.get('region', 'ALL')
+            else:
+                username = username or 'SYSTEM'
+                role = role or 'system'
+                region = region or 'ALL'
+                
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO audit_logs (timestamp, username, role, action, target_id, details, region)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (timestamp, str(username), str(role), str(action), str(target_id) if target_id else "", str(details), str(region)))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Audit log error: {e}")
+
+def fetch_audit_logs(region_filter=None, action_filter=None, limit=500):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    query = "SELECT * FROM audit_logs WHERE 1=1"
+    params = []
+    
+    if region_filter and region_filter != "ALL":
+        query += " AND (region = ? OR region = 'ALL')"
+        params.append(region_filter)
+        
+    if action_filter and action_filter != "ALL":
+        query += " AND action = ?"
+        params.append(action_filter)
+        
+    query += " ORDER BY id DESC LIMIT ?"
+    params.append(limit)
+    
+    cursor.execute(query, tuple(params))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
 # User Auth Functions
 def authenticate_user(username, password):
     conn = get_db_connection()
@@ -156,7 +221,16 @@ def authenticate_user(username, password):
     row = cursor.fetchone()
     conn.close()
     if row and verify_password(password, row["password_hash"]):
-        return dict(row)
+        user_dict = dict(row)
+        log_audit_event(
+            action="USER_LOGIN",
+            target_id=user_dict["username"],
+            details=f"User '{user_dict['username']}' ({user_dict['role']}) logged in successfully",
+            region=user_dict["region"],
+            username=user_dict["username"],
+            role=user_dict["role"]
+        )
+        return user_dict
     return None
 
 def fetch_all_users():
@@ -176,6 +250,7 @@ def insert_user(username, password, full_name, role, region):
             VALUES (?, ?, ?, ?, ?)
         """, (username.strip(), hash_password(password), full_name.strip(), role, region))
         conn.commit()
+        log_audit_event("CREATE_USER", username.strip(), f"Created user account '{username.strip()}' with role '{role}' in region '{region}'")
         return True, "User account created successfully!"
     except sqlite3.IntegrityError:
         return False, f"Username '{username}' already exists!"
@@ -190,6 +265,7 @@ def delete_user(username):
     cursor.execute("DELETE FROM users WHERE username = ?", (username,))
     conn.commit()
     conn.close()
+    log_audit_event("DELETE_USER", username, f"Deleted user account '{username}'")
 
 # Staff Database Functions (Region-scoped)
 def insert_staff_record(emp_id, full_name, category, designation, department, region, photo_path, signature_path, qr_path="PENDING"):
@@ -201,6 +277,7 @@ def insert_staff_record(emp_id, full_name, category, designation, department, re
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (emp_id, full_name, category, designation, department, region, str(photo_path), str(signature_path), str(qr_path)))
         conn.commit()
+        log_audit_event("CREATE_STAFF", emp_id, f"Registered staff '{full_name}' ({emp_id}) - Category: {category}, Dept: {department}, Region: {region}", region=region)
         return True, "Record saved successfully!"
     except sqlite3.IntegrityError:
         return False, f"Employee ID '{emp_id}' already exists in database!"
@@ -209,24 +286,27 @@ def insert_staff_record(emp_id, full_name, category, designation, department, re
     finally:
         conn.close()
 
-def update_staff_record(emp_id, full_name, category, designation, department, region, photo_path=None):
-    """Update existing staff details (Employee ID & Signature are read-only)."""
+def update_staff_record(emp_id, full_name, category, designation, department, region, photo_path=None, signature_path=None):
+    """Update existing staff details, photo, and digital signature."""
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
+        query = "UPDATE staff_records SET full_name = ?, category = ?, designation = ?, department = ?, region = ?"
+        params = [full_name, category, designation, department, region]
+        
         if photo_path:
-            cursor.execute("""
-                UPDATE staff_records 
-                SET full_name = ?, category = ?, designation = ?, department = ?, region = ?, photo_path = ?
-                WHERE emp_id = ?
-            """, (full_name, category, designation, department, region, str(photo_path), emp_id))
-        else:
-            cursor.execute("""
-                UPDATE staff_records 
-                SET full_name = ?, category = ?, designation = ?, department = ?
-                WHERE emp_id = ?
-            """, (full_name, category, designation, department, emp_id))
+            query += ", photo_path = ?"
+            params.append(str(photo_path))
+        if signature_path:
+            query += ", signature_path = ?"
+            params.append(str(signature_path))
+            
+        query += " WHERE emp_id = ?"
+        params.append(emp_id)
+        
+        cursor.execute(query, tuple(params))
         conn.commit()
+        log_audit_event("UPDATE_STAFF", emp_id, f"Updated staff details/media for '{full_name}' ({emp_id})", region=region)
         return True, "Staff record updated successfully!"
     except Exception as e:
         return False, f"Update Error: {str(e)}"
@@ -270,6 +350,171 @@ def delete_staff_record(emp_id):
     cursor.execute("DELETE FROM staff_records WHERE emp_id = ?", (emp_id,))
     conn.commit()
     conn.close()
+    log_audit_event("DELETE_STAFF", emp_id, f"Deleted staff record '{emp_id}'")
+
+# ==========================================
+# BULK DATA IMPORT & VALIDATION ENGINE
+# ==========================================
+def generate_sample_csv_template():
+    df = pd.DataFrame([
+        {
+            "emp_id": "YEDC/STAFF/001",
+            "full_name": "Musa Adamu",
+            "category": "Permanent",
+            "designation": "Principal Engineer",
+            "department": "Technical",
+            "region": "Adamawa"
+        },
+        {
+            "emp_id": "YEDC/STAFF/002",
+            "full_name": "Amina Usman",
+            "category": "Contract",
+            "designation": "Senior Commercial Officer",
+            "department": "Commercial",
+            "region": "Borno"
+        },
+        {
+            "emp_id": "YEDC/STAFF/003",
+            "full_name": "John Okafor",
+            "category": "Junior Staff",
+            "designation": "Technician",
+            "department": "Technical",
+            "region": "Taraba"
+        }
+    ])
+    return df.to_csv(index=False).encode('utf-8')
+
+def validate_bulk_staff_df(df, user_region, user_role):
+    """
+    Validates uploaded bulk dataframe.
+    Returns: (valid_records_list, errors_list)
+    """
+    required_cols = ["emp_id", "full_name", "category", "designation", "department", "region"]
+    missing_cols = [c for c in required_cols if c not in df.columns]
+    if missing_cols:
+        return [], [{"row": "Header", "emp_id": "N/A", "error": f"Missing required columns: {', '.join(missing_cols)}"}]
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT emp_id FROM staff_records")
+    existing_emp_ids = set(r[0] for r in cursor.fetchall())
+    conn.close()
+    
+    valid_records = []
+    errors = []
+    seen_file_ids = set()
+    
+    allowed_categories = ["Permanent", "Contract", "Intern", "NYSC"]
+    
+    for idx, row in df.iterrows():
+        row_num = idx + 2  # 1-based header offset
+        emp_id = str(row.get("emp_id", "")).strip()
+        full_name = str(row.get("full_name", "")).strip()
+        category = str(row.get("category", "")).strip()
+        designation = str(row.get("designation", "Staff Member")).strip() or "Staff Member"
+        department = str(row.get("department", "Technical")).strip() or "Technical"
+        region = str(row.get("region", "Adamawa")).strip()
+        
+        row_errors = []
+        if not emp_id or emp_id == "nan":
+            row_errors.append("Employee ID is required")
+        elif emp_id in existing_emp_ids:
+            row_errors.append(f"Employee ID '{emp_id}' already exists in database")
+        elif emp_id in seen_file_ids:
+            row_errors.append(f"Duplicate Employee ID '{emp_id}' within file")
+        else:
+            seen_file_ids.add(emp_id)
+            
+        if not full_name or full_name == "nan":
+            row_errors.append("Full Name is required")
+            
+        if region not in REGIONS:
+            row_errors.append(f"Invalid Region '{region}'. Must be one of: {', '.join(REGIONS)}")
+        elif user_role != "super_admin" and region != user_region:
+            row_errors.append(f"Region '{region}' is outside your assigned region scope ({user_region})")
+            
+        matched_cat = next((c for c in allowed_categories if c.lower() == category.lower()), None)
+        if matched_cat:
+            category = matched_cat
+        else:
+            row_errors.append(f"Invalid Category '{category}'. Allowed: {', '.join(allowed_categories)}")
+
+        if row_errors:
+            for err in row_errors:
+                errors.append({"row": f"Row {row_num}", "emp_id": emp_id if emp_id != 'nan' else 'N/A', "error": err})
+        else:
+            valid_records.append({
+                "emp_id": emp_id,
+                "full_name": full_name,
+                "category": category,
+                "designation": designation,
+                "department": department,
+                "region": region
+            })
+            
+    return valid_records, errors
+
+def process_bulk_staff_import(valid_records):
+    """
+    Inserts valid bulk staff records, auto-generates QR codes, and logs audit event.
+    Returns: (success_count, fail_count, error_messages)
+    """
+    success_count = 0
+    fail_count = 0
+    err_msgs = []
+    
+    placeholder_photo = DIRS["photos"] / "placeholder.png"
+    placeholder_sig = DIRS["signatures"] / "placeholder.png"
+    
+    if not placeholder_photo.exists():
+        img = Image.new('RGB', (300, 375), color=(220, 225, 230))
+        img.save(placeholder_photo)
+    if not placeholder_sig.exists():
+        img = Image.new('RGB', (300, 100), color=(240, 240, 240))
+        img.save(placeholder_sig)
+        
+    for rec in valid_records:
+        emp_id = rec["emp_id"]
+        full_name = rec["full_name"]
+        category = rec["category"]
+        designation = rec["designation"]
+        department = rec["department"]
+        region = rec["region"]
+        
+        safe_id = re.sub(r'[^a-zA-Z0-9_-]', '_', emp_id)
+        photo_rel = f"photos/{safe_id}_photo.png"
+        sig_rel = f"signatures/{safe_id}_sig.png"
+        
+        dest_p = BASE_DIR / photo_rel
+        dest_s = BASE_DIR / sig_rel
+        if not dest_p.exists():
+            Image.open(placeholder_photo).save(dest_p)
+        if not dest_s.exists():
+            Image.open(placeholder_sig).save(dest_s)
+            
+        qr_p = auto_generate_staff_qr(emp_id, full_name, category, region)
+        
+        ok, msg = insert_staff_record(
+            emp_id=emp_id,
+            full_name=full_name,
+            category=category,
+            designation=designation,
+            department=department,
+            region=region,
+            photo_path=photo_rel,
+            signature_path=sig_rel,
+            qr_path=qr_p
+        )
+        if ok:
+            success_count += 1
+        else:
+            fail_count += 1
+            err_msgs.append(f"{emp_id}: {msg}")
+            
+    if success_count > 0:
+        log_audit_event("BULK_IMPORT", f"BATCH_{success_count}", f"Successfully imported {success_count} staff records via Bulk Import (CSV/Excel)", region="ALL")
+        
+    return success_count, fail_count, err_msgs
 
 # ==========================================
 # 3. HELPER UTILITIES & IMAGE / DUAL PDF RENDERER (WKHTMLTOPDF + XHTML2PDF FALLBACK)
@@ -352,7 +597,8 @@ def auto_generate_staff_qr(emp_id, full_name, category, region):
     except Exception:
         qr_img = Image.new("RGB", (200, 200), color=(15, 23, 42))
 
-    qr_filename = f"{emp_id}_qr.png"
+    safe_emp_id = re.sub(r'[^a-zA-Z0-9_-]', '_', emp_id)
+    qr_filename = f"{safe_emp_id}_qr.png"
     qr_rel_path = f"qr_codes/{qr_filename}"
     qr_abs_path = DIRS["qr_codes"] / qr_filename
     qr_img.save(qr_abs_path)
@@ -491,7 +737,10 @@ def generate_pdf_card(record):
 
     rendered_html = template.render(context)
     output_pdf_path = DIRS["generated_pdfs"] / f"{record['emp_id']}_ID_Card.pdf"
-    return convert_html_to_pdf(rendered_html, output_pdf_path, is_card=True)
+    res_ok, res_path = convert_html_to_pdf(rendered_html, output_pdf_path, is_card=True)
+    if res_ok:
+        log_audit_event("EXPORT_PDF_CARD", record["emp_id"], f"Generated CR80 Plastic ID Card PDF for {record['full_name']} ({record['emp_id']})", region=record.get("region", "ALL"))
+    return res_ok, res_path
 
 def generate_id_request_form_pdf(record):
     """Generate official YEDC Identity Card Request Form PDF matching HR document layout, fitting perfectly on 1 A4 page."""
@@ -533,7 +782,10 @@ def generate_id_request_form_pdf(record):
     clean_name = re.sub(r'[^a-zA-Z0-9_-]', '_', record['full_name'])
     clean_id = re.sub(r'[^a-zA-Z0-9_-]', '_', record['emp_id'])
     output_pdf_path = DIRS["generated_pdfs"] / f"{clean_id}_{clean_name}_Request_Form.pdf"
-    return convert_html_to_pdf(rendered_html, output_pdf_path, is_card=False)
+    res_ok, res_path = convert_html_to_pdf(rendered_html, output_pdf_path, is_card=False)
+    if res_ok:
+        log_audit_event("EXPORT_REQUEST_FORM", record["emp_id"], f"Generated ID Card Request Form PDF for {record['full_name']} ({record['emp_id']})", region=record.get("region", "ALL"))
+    return res_ok, res_path
 
 def generate_staff_master_pdf_report(records, region_filter="ALL"):
     """Render full master report of registered staff members to PDF."""
@@ -564,7 +816,10 @@ def generate_staff_master_pdf_report(records, region_filter="ALL"):
 
     rendered_html = template.render(context)
     output_pdf_path = DIRS["generated_pdfs"] / f"YEDC_Staff_Master_Report_{region_filter}.pdf"
-    return convert_html_to_pdf(rendered_html, output_pdf_path, is_card=False)
+    res_ok, res_path = convert_html_to_pdf(rendered_html, output_pdf_path, is_card=False)
+    if res_ok:
+        log_audit_event("EXPORT_MASTER_REPORT", f"MASTER_{region_filter}", f"Generated Master Staff Directory PDF report for region filter '{region_filter}' (Total: {len(records)})", region=region_filter)
+    return res_ok, res_path
 
 def image_to_base64(img_path):
     try:
@@ -577,7 +832,7 @@ def image_to_base64(img_path):
 
 def create_pdf_zip_archive(records=None):
     if records is None:
-        records = fetch_all_staff()
+        records = fetch_all_records()
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
         for r in records:
@@ -585,6 +840,7 @@ def create_pdf_zip_archive(records=None):
             if ok and os.path.exists(pdf_path):
                 zip_file.write(pdf_path, arcname=os.path.basename(pdf_path))
     zip_buffer.seek(0)
+    log_audit_event("EXPORT_BATCH_ZIP", f"BATCH_ZIP_{len(records)}", f"Generated Batch ZIP Archive containing {len(records)} staff request forms", region="ALL")
     return zip_buffer
 
 # ==========================================
@@ -1280,315 +1536,358 @@ if selected_page == "📊 Dashboard":
 # 8. PAGE 2: STAFF REGISTER & DRAFT PREVIEW
 # ==========================================
 elif selected_page == "📝 Staff Register":
-    st.markdown("### New Staff Registration")
+    st.markdown("### Staff Enrollment & Registration")
     
-    col_form, col_prev = st.columns([1.2, 0.8], gap="large")
+    tab_single, tab_bulk = st.tabs(["✍️ Single Staff Enrollment", "📥 Bulk Data Import (CSV / Excel)"])
 
-    f_cnt = st.session_state.form_counter
+    with tab_single:
+        col_form, col_prev = st.columns([1.2, 0.8], gap="large")
 
-    with col_form:
-        # Category Selection outside/top of form for 100% reactive Department & Role behavior
-        reg_cat_key = f"inp_cat_{f_cnt}"
-        category = st.selectbox("Staff Category *", ["Permanent", "Contract", "Intern", "NYSC"], key=reg_cat_key)
+        f_cnt = st.session_state.form_counter
 
-        with st.form(f"staff_capture_form_{f_cnt}", clear_on_submit=False):
-            f_col1, f_col2 = st.columns(2)
-            with f_col1:
-                if category == "NYSC":
-                    emp_id = st.text_input("State Code / Call-Up No *", placeholder="e.g. AD/23B/1045", key=f"inp_emp_{f_cnt}").strip()
-                elif category == "Intern":
-                    emp_id = st.text_input("Intern / Student ID *", placeholder="e.g. INT-2026-045", key=f"inp_emp_{f_cnt}").strip()
+        with col_form:
+            # Category Selection outside/top of form for 100% reactive Department & Role behavior
+            reg_cat_key = f"inp_cat_{f_cnt}"
+            category = st.selectbox("Staff Category *", ["Permanent", "Contract", "Intern", "NYSC"], key=reg_cat_key)
+
+            with st.form(f"staff_capture_form_{f_cnt}", clear_on_submit=False):
+                f_col1, f_col2 = st.columns(2)
+                with f_col1:
+                    if category == "NYSC":
+                        emp_id = st.text_input("State Code / Call-Up No *", placeholder="e.g. AD/23B/1045", key=f"inp_emp_{f_cnt}").strip()
+                    elif category == "Intern":
+                        emp_id = st.text_input("Intern / Student ID *", placeholder="e.g. INT-2026-045", key=f"inp_emp_{f_cnt}").strip()
+                    else:
+                        emp_id = st.text_input("Employee Staff ID *", placeholder="e.g. YEDC-1045", key=f"inp_emp_{f_cnt}").strip()
+
+                    full_name = st.text_input("Full Name *", placeholder="e.g. John Doe", key=f"inp_name_{f_cnt}").strip()
+                    
+                with f_col2:
+                    if category == "Intern":
+                        st.text_input("Role / Designation", value="Intern", disabled=True, key=f"inp_desig_dis_{f_cnt}")
+                        dept_input = st.selectbox("Assigned Department / Unit *", DEPARTMENTS, key=f"inp_dept_{f_cnt}")
+                        designation = "Intern"
+                    elif category == "NYSC":
+                        st.text_input("Role / Designation", value="NYSC Corper", disabled=True, key=f"inp_desig_dis_{f_cnt}")
+                        dept_input = st.selectbox("PPA Department / Unit *", DEPARTMENTS, key=f"inp_dept_{f_cnt}")
+                        designation = "NYSC Corper"
+                    else:
+                        desig_input = st.text_input("Role / Designation *", value="", placeholder="e.g. Linesman", key=f"inp_desig_{f_cnt}").strip()
+                        designation = desig_input if desig_input else "Staff Member"
+                        dept_input = st.selectbox("Department *", DEPARTMENTS, key=f"inp_dept_{f_cnt}")
+
+                # Region Selection (Locked for Regional Admin / Enrollment Assistant, Selectable for Super Admin)
+                if is_super_admin:
+                    staff_region = st.selectbox("Assign Region *", REGIONS, key=f"inp_reg_{f_cnt}")
                 else:
-                    emp_id = st.text_input("Employee Staff ID *", placeholder="e.g. YEDC-1045", key=f"inp_emp_{f_cnt}").strip()
+                    staff_region = user_region
+                    st.text_input("Assigned Region", value=user_region, disabled=True, key=f"inp_reg_dis_{f_cnt}")
 
-                full_name = st.text_input("Full Name *", placeholder="e.g. John Doe", key=f"inp_name_{f_cnt}").strip()
-                
-            with f_col2:
-                if category == "Intern":
-                    st.text_input("Role / Designation", value="Intern", disabled=True, key=f"inp_desig_dis_{f_cnt}")
-                    dept_input = st.selectbox("Assigned Department / Unit *", DEPARTMENTS, key=f"inp_dept_{f_cnt}")
-                    designation = "Intern"
-                elif category == "NYSC":
-                    st.text_input("Role / Designation", value="NYSC Corper", disabled=True, key=f"inp_desig_dis_{f_cnt}")
-                    dept_input = st.selectbox("PPA Department / Unit *", DEPARTMENTS, key=f"inp_dept_{f_cnt}")
-                    designation = "NYSC Corper"
-                else:
-                    desig_input = st.text_input("Role / Designation *", value="", placeholder="e.g. Linesman", key=f"inp_desig_{f_cnt}").strip()
-                    designation = desig_input if desig_input else "Staff Member"
-                    dept_input = st.selectbox("Department *", DEPARTMENTS, key=f"inp_dept_{f_cnt}")
+                st.markdown("##### 📷 Staff Photo Capture")
+                st.caption("Click below to select a photo file or open your device's native camera window:")
+                st.caption("⚠️ **Requirement:** Only photos with a **plain white background** are accepted. Non-white backgrounds will be rejected.")
 
-            # Region Selection (Locked for Regional Admin / Enrollment Assistant, Selectable for Super Admin)
-            if is_super_admin:
-                staff_region = st.selectbox("Assign Region *", REGIONS, key=f"inp_reg_{f_cnt}")
-            else:
-                staff_region = user_region
-                st.text_input("Assigned Region", value=user_region, disabled=True, key=f"inp_reg_dis_{f_cnt}")
+                photo_file = st.file_uploader("📷 Select / Capture Staff Photo (JPG, PNG, HEIC) *", type=["jpg", "jpeg", "png", "heic", "heif"], key=f"uploader_photo_{f_cnt}")
 
-            st.markdown("##### 📷 Staff Photo Capture")
-            st.caption("Click below to select a photo file or open your device's native camera window:")
-            st.caption("⚠️ **Requirement:** Only photos with a **plain white background** are accepted. Non-white backgrounds will be rejected.")
+                if photo_file is not None:
+                    is_bg_valid, bg_msg = validate_white_background(photo_file)
+                    if not is_bg_valid:
+                        st.error(f"❌ Photo Rejected: {bg_msg}")
+                    else:
+                        st.caption(f"✓ Photo loaded ({photo_file.size / 1024:.1f} KB) - White Background Verified")
 
-            photo_file = st.file_uploader("📷 Select / Capture Staff Photo (JPG, PNG, HEIC) *", type=["jpg", "jpeg", "png", "heic", "heif"], key=f"uploader_photo_{f_cnt}")
+                st.markdown("##### ✍️ Digital Signature Pad")
+                st.caption("Draw staff signature inside the canvas:")
 
-            if photo_file is not None:
-                is_bg_valid, bg_msg = validate_white_background(photo_file)
-                if not is_bg_valid:
-                    st.error(f"❌ Photo Rejected: {bg_msg}")
-                else:
-                    st.caption(f"✓ Photo loaded ({photo_file.size / 1024:.1f} KB) - White Background Verified")
-
-            st.markdown("##### ✍️ Digital Signature Pad")
-            st.caption("Draw staff signature inside the canvas:")
-
-            canvas_result = st_canvas(
-                fill_color="rgba(255, 255, 255, 0)",
-                stroke_width=2.5,
-                stroke_color="#0F172A",
-                background_color="#FFFFFF",
-                height=145,
-                width=330,
-                drawing_mode="freedraw",
-                key=f"signature_canvas_{f_cnt}",
-            )
-
-            submit_btn = st.form_submit_button("💾 Save Staff Record", use_container_width=True)
-
-    with col_prev:
-        st.markdown("##### 🪪 Live Draft Preview")
-        st.caption("⚠️ Temporary Preview Template (Subject to final approved design)")
-
-        saved_rec = st.session_state.get("last_saved_record")
-
-        if saved_rec:
-            disp_name = saved_rec["full_name"]
-            disp_id = saved_rec["emp_id"]
-            disp_desig = saved_rec["designation"]
-            disp_dept = saved_rec["department"]
-            disp_cat = saved_rec["category"]
-            disp_reg = saved_rec["region"]
-            preview_photo_b64 = saved_rec["photo_b64"]
-            preview_sig_b64 = saved_rec["sig_b64"]
-        else:
-            preview_photo_b64 = ""
-            preview_sig_b64 = ""
-            if photo_file:
-                try:
-                    processed_preview = process_and_optimize_photo(photo_file)
-                    buf = io.BytesIO()
-                    processed_preview.save(buf, format="JPEG", quality=95)
-                    preview_photo_b64 = f"data:image/jpeg;base64,{base64.b64encode(buf.getvalue()).decode()}"
-                except Exception as e:
-                    st.caption(f"Preview load notice: {str(e)}")
-
-            disp_name = full_name if full_name else "FULL NAME"
-            disp_id = emp_id if emp_id else "YEDC-0000"
-            disp_cat = category if category else "Permanent"
-            
-            if disp_cat in ["Intern", "NYSC"]:
-                disp_desig = disp_cat
-                disp_dept = "N/A"
-            else:
-                disp_desig = designation if designation else "Role / Designation"
-                disp_dept = dept_input if dept_input else "Technical"
-
-            disp_reg = staff_region
-
-        photo_render = f'<img src="{preview_photo_b64}" style="width: 100%; height: 100%; object-fit: cover;">' if preview_photo_b64 else '<div style="color:#94a3b8;font-size:11px;font-weight:bold;">[ Photo ]</div>'
-        sig_render = f'<img src="{preview_sig_b64}" style="max-height:22px;max-width:55px;vertical-align:middle;">' if preview_sig_b64 else '<span style="font-size:8px;color:#94a3b8;">[ Signature ]</span>'
-
-        if disp_cat == "Contract":
-            st.markdown(f"""
-            <div style="width: 240px; height: 380px; background: #ffffff; border-radius: 14px; border: 2px solid #0c1a40; box-shadow: 0 12px 30px rgba(0,0,0,0.12); overflow: hidden; margin: 0 auto; position: relative; font-family: 'Plus Jakarta Sans', Arial, sans-serif;">
-                <!-- Top Red & Orange Stripes -->
-                <div style="position: absolute; top: 0; right: 0; width: 140px; height: 16px;">
-                    <div style="position: absolute; top: 0; right: 0; width: 95px; height: 8px; background: #e52e04;"></div>
-                    <div style="position: absolute; top: 9px; right: 0; width: 65px; height: 5px; background: #f96302;"></div>
-                </div>
-                <!-- Header Logo & Title -->
-                <div style="padding: 12px 10px 4px 10px; display: flex; align-items: center; gap: 6px;">
-                    {f'<img src="{logo_b64}" style="max-height: 28px; width: auto;">' if logo_b64 else ''}
-                    <div style="font-size: 10px; font-weight: 800; color: #0c1a40; line-height: 1.1;">Yola Electricity<br>Distribution Company</div>
-                </div>
-                <!-- Photo Container -->
-                <div style="text-align: center; margin: 4px 0;">
-                    <div style="width: 110px; height: 128px; margin: 0 auto; border: 4px solid #e52e04; border-radius: 12px; background: #f8fafc; overflow: hidden; display: flex; align-items: center; justify-content: center;">
-                        {photo_render}
-                    </div>
-                </div>
-                <!-- Staff Info -->
-                <div style="text-align: center; padding: 0 6px;">
-                    <div style="font-size: 13px; font-weight: 900; color: #0c1a40; text-transform: uppercase;">{disp_name}</div>
-                    <div style="font-size: 11px; font-weight: 800; color: #0c1a40; text-transform: uppercase; margin-top: 2px;">{disp_desig}</div>
-                </div>
-                <!-- ID & Signature Table (NO BORDERS) -->
-                <table style="width: 88%; margin: 6px auto 2px auto; font-size: 11px; font-weight: bold; color: #0c1a40; border-collapse: collapse; border: none;">
-                    <tr style="border: none;">
-                        <td style="width: 46%; border: none; padding: 2px 0; font-weight: 800; text-align: left;">ID No</td>
-                        <td style="border: none; padding: 2px 0; font-weight: 800; text-align: left;">: {disp_id}</td>
-                    </tr>
-                    <tr style="border: none;">
-                        <td style="border: none; padding: 2px 0; font-weight: 800; text-align: left; vertical-align: middle;">Holder's<br>Sign</td>
-                        <td style="border: none; padding: 2px 0; text-align: left; vertical-align: middle;">{sig_render}</td>
-                    </tr>
-                </table>
-                <!-- QR Code -->
-                <div style="text-align: center; margin-top: 2px;">
-                    <div style="display: inline-block; padding: 2px 5px; border: 1px dashed #cbd5e1; border-radius: 3px; font-size: 7.5px; color: #64748b; font-weight: bold;">
-                        ┌ &nbsp;&nbsp; 📷 QR &nbsp;&nbsp; ┐
-                    </div>
-                </div>
-                <!-- Bottom Graphic Banner -->
-                <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: 16px;">
-                    <div style="position: absolute; bottom: 8px; left: 0; width: 100px; height: 5px; background: #e52e04;"></div>
-                    <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: 8px; background: #0c1a40;"></div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-        else:
-            # Permanent Staff Template Preview
-            st.markdown(f"""
-            <div style="width: 240px; height: 380px; background: #ffffff; border-radius: 14px; border: 2px solid #0c1a40; box-shadow: 0 12px 30px rgba(0,0,0,0.12); overflow: hidden; margin: 0 auto; position: relative; font-family: 'Plus Jakarta Sans', Arial, sans-serif;">
-                <!-- Top Curved Orange Accent -->
-                <div style="position: absolute; top: 0; right: 0; width: 105px; height: 38px; background: linear-gradient(135deg, #ff5522, #f03a17); border-bottom-left-radius: 38px;"></div>
-                <!-- Header Logo & Title -->
-                <div style="padding: 12px 10px 4px 10px; display: flex; align-items: center; gap: 6px; position: relative; z-index: 2;">
-                    {f'<img src="{logo_b64}" style="max-height: 28px; width: auto;">' if logo_b64 else ''}
-                    <div style="font-size: 10px; font-weight: 800; color: #0c1a40; line-height: 1.1;">Yola Electricity<br>Distribution Company</div>
-                </div>
-                <!-- Photo Container -->
-                <div style="text-align: center; margin: 4px 0; position: relative; z-index: 2;">
-                    <div style="width: 110px; height: 128px; margin: 0 auto; border: 4px solid #1a529e; background: #f8fafc; overflow: hidden; display: flex; align-items: center; justify-content: center;">
-                        {photo_render}
-                    </div>
-                </div>
-                <!-- Staff Info -->
-                <div style="text-align: center; padding: 0 6px; position: relative; z-index: 2;">
-                    <div style="font-size: 13.5px; font-weight: 900; color: #0c1a40;">{disp_name}</div>
-                    <div style="background: #0c1a40; color: white; font-size: 9.5px; font-weight: bold; padding: 3px 10px; border-radius: 12px; display: inline-block; margin: 3px 0 2px 0;">{disp_dept}</div>
-                </div>
-                <!-- ID & Signature Table (NO BORDERS) -->
-                <table style="width: 88%; margin: 6px auto 2px auto; font-size: 11px; font-weight: bold; color: #0c1a40; border-collapse: collapse; border: none; position: relative; z-index: 2;">
-                    <tr style="border: none;">
-                        <td style="width: 46%; border: none; padding: 2px 0; font-weight: 800; text-align: left;">ID No</td>
-                        <td style="border: none; padding: 2px 0; font-weight: 800; text-align: left;">: {disp_id}</td>
-                    </tr>
-                    <tr style="border: none;">
-                        <td style="border: none; padding: 2px 0; font-weight: 800; text-align: left; vertical-align: middle;">Holder's<br>Sign</td>
-                        <td style="border: none; padding: 2px 0; text-align: left; vertical-align: middle;">{sig_render}</td>
-                    </tr>
-                </table>
-                <!-- QR Code -->
-                <div style="text-align: center; margin-top: 2px; position: relative; z-index: 2;">
-                    <div style="display: inline-block; padding: 2px 5px; border: 1px dashed #cbd5e1; border-radius: 3px; font-size: 7.5px; color: #64748b; font-weight: bold;">
-                        ┌ &nbsp;&nbsp; 📷 QR &nbsp;&nbsp; ┐
-                    </div>
-                </div>
-                <!-- Bottom Graphic Accents -->
-                <div style="position: absolute; bottom: 0; left: 0; width: 85px; height: 38px; background: linear-gradient(135deg, #ff5522, #f03a17); border-top-right-radius: 38px; z-index: 1;"></div>
-                <div style="position: absolute; bottom: 0; right: 0; width: 95px; height: 44px; background: #0c1a40; border-top-left-radius: 44px; z-index: 1;"></div>
-            </div>
-            """, unsafe_allow_html=True)
-
-    if submit_btn:
-        if category in ["Intern", "NYSC"]:
-            final_dept = "N/A"
-            final_desig = category
-        else:
-            final_dept = dept_input
-            final_desig = designation
-
-        if not emp_id:
-            st.error("Please enter Employee ID.")
-        elif not full_name:
-            st.error("Please enter Full Name.")
-        elif photo_file is None:
-            st.error("Please upload or capture photo.")
-        elif canvas_result is None or canvas_result.image_data is None:
-            st.error("Please sign on signature pad.")
-        else:
-            try:
-                is_bg_valid, bg_msg = validate_white_background(photo_file)
-                if not is_bg_valid:
-                    st.error(f"❌ Registration Rejected: {bg_msg}")
-                else:
-                    processed_photo = process_and_optimize_photo(photo_file)
-
-                photo_filename = f"{emp_id}_photo.jpg"
-                photo_rel_path = f"photos/{photo_filename}"
-                photo_abs_path = DIRS["photos"] / photo_filename
-                processed_photo.save(photo_abs_path, format="JPEG", quality=99, optimize=True)
-
-                sig_data = canvas_result.image_data.astype(np.uint8)
-                sig_image = Image.fromarray(sig_data)
-
-                # Composite signature RGBA onto solid white background to prevent transparent line cutouts
-                if sig_image.mode == "RGBA":
-                    bg = Image.new("RGB", sig_image.size, (255, 255, 255))
-                    bg.paste(sig_image, mask=sig_image.split()[3])
-                    sig_image = bg
-                elif sig_image.mode != "RGB":
-                    sig_image = sig_image.convert("RGB")
-
-                sig_filename = f"{emp_id}_sig.png"
-                sig_rel_path = f"signatures/{sig_filename}"
-                sig_abs_path = DIRS["signatures"] / sig_filename
-                sig_image.save(sig_abs_path, format="PNG")
-
-                buf_photo = io.BytesIO()
-                processed_photo.save(buf_photo, format="JPEG", quality=99)
-                photo_b64_str = f"data:image/jpeg;base64,{base64.b64encode(buf_photo.getvalue()).decode()}"
-
-                buf_sig = io.BytesIO()
-                sig_image.save(buf_sig, format="PNG")
-                sig_b64_str = f"data:image/png;base64,{base64.b64encode(buf_sig.getvalue()).decode()}"
-
-                qr_rel_path = "NOT_REQUIRED"
-
-                success, msg = insert_staff_record(
-                    emp_id=emp_id,
-                    full_name=full_name,
-                    category=category,
-                    designation=final_desig,
-                    department=final_dept,
-                    region=staff_region,
-                    photo_path=photo_rel_path,
-                    signature_path=sig_rel_path,
-                    qr_path=qr_rel_path
+                canvas_result = st_canvas(
+                    fill_color="rgba(255, 255, 255, 0)",
+                    stroke_width=2.5,
+                    stroke_color="#0F172A",
+                    background_color="#FFFFFF",
+                    height=145,
+                    width=330,
+                    drawing_mode="freedraw",
+                    key=f"signature_canvas_{f_cnt}",
                 )
 
-                if success:
-                    # Pre-generate official A4 ID Card Request Form PDF immediately
-                    new_record = {
-                        "emp_id": emp_id,
-                        "full_name": full_name,
-                        "category": category,
-                        "designation": final_desig,
-                        "department": final_dept,
-                        "region": staff_region,
-                        "photo_path": photo_rel_path,
-                        "signature_path": sig_rel_path,
-                        "qr_path": qr_rel_path
-                    }
-                    generate_id_request_form_pdf(new_record)
+                submit_btn = st.form_submit_button("💾 Save Staff Record", use_container_width=True)
 
-                    st.session_state.form_saved_success = True
-                    st.session_state.saved_emp_id = emp_id
-                    st.session_state.last_saved_record = {
-                        "emp_id": emp_id,
-                        "full_name": full_name,
-                        "category": category,
-                        "designation": final_desig,
-                        "department": final_dept,
-                        "region": staff_region,
-                        "photo_b64": photo_b64_str,
-                        "sig_b64": sig_b64_str
-                    }
-                    st.rerun()
+        with col_prev:
+            st.markdown("##### 🪪 Live Draft Preview")
+            st.caption("⚠️ Temporary Preview Template (Subject to final approved design)")
+
+            saved_rec = st.session_state.get("last_saved_record")
+
+            if saved_rec:
+                disp_name = saved_rec["full_name"]
+                disp_id = saved_rec["emp_id"]
+                disp_desig = saved_rec["designation"]
+                disp_dept = saved_rec["department"]
+                disp_cat = saved_rec["category"]
+                disp_reg = saved_rec["region"]
+                preview_photo_b64 = saved_rec["photo_b64"]
+                preview_sig_b64 = saved_rec["sig_b64"]
+            else:
+                preview_photo_b64 = ""
+                preview_sig_b64 = ""
+                if photo_file:
+                    try:
+                        processed_preview = process_and_optimize_photo(photo_file)
+                        buf = io.BytesIO()
+                        processed_preview.save(buf, format="JPEG", quality=95)
+                        preview_photo_b64 = f"data:image/jpeg;base64,{base64.b64encode(buf.getvalue()).decode()}"
+                    except Exception as e:
+                        st.caption(f"Preview load notice: {str(e)}")
+
+                disp_name = full_name if full_name else "FULL NAME"
+                disp_id = emp_id if emp_id else "YEDC-0000"
+                disp_cat = category if category else "Permanent"
+                
+                if disp_cat in ["Intern", "NYSC"]:
+                    disp_desig = disp_cat
+                    disp_dept = "N/A"
                 else:
-                    st.error(f"❌ {msg}")
+                    disp_desig = designation if designation else "Role / Designation"
+                    disp_dept = dept_input if dept_input else "Technical"
 
-            except Exception as e:
-                st.error(f"Error processing photo: {str(e)}")
+                disp_reg = staff_region
+
+            photo_render = f'<img src="{preview_photo_b64}" style="width: 100%; height: 100%; object-fit: cover;">' if preview_photo_b64 else '<div style="color:#94a3b8;font-size:11px;font-weight:bold;">[ Photo ]</div>'
+            sig_render = f'<img src="{preview_sig_b64}" style="max-height:22px;max-width:55px;vertical-align:middle;">' if preview_sig_b64 else '<span style="font-size:8px;color:#94a3b8;">[ Signature ]</span>'
+
+            if disp_cat == "Contract":
+                st.markdown(f"""
+                <div style="width: 240px; height: 380px; background: #ffffff; border-radius: 14px; border: 2px solid #0c1a40; box-shadow: 0 12px 30px rgba(0,0,0,0.12); overflow: hidden; margin: 0 auto; position: relative; font-family: 'Plus Jakarta Sans', Arial, sans-serif;">
+                    <!-- Top Red & Orange Stripes -->
+                    <div style="position: absolute; top: 0; right: 0; width: 140px; height: 16px;">
+                        <div style="position: absolute; top: 0; right: 0; width: 95px; height: 8px; background: #e52e04;"></div>
+                        <div style="position: absolute; top: 9px; right: 0; width: 65px; height: 5px; background: #f96302;"></div>
+                    </div>
+                    <!-- Header Logo & Title -->
+                    <div style="padding: 14px 14px 4px 14px; display: flex; align-items: center; gap: 8px;">
+                        <img src="{logo_b64}" style="height: 28px;">
+                        <div>
+                            <div style="font-size: 8.5px; font-weight: 800; color: #0c1a40; letter-spacing: 0.3px; line-height: 1.1;">YOLA ELECTRICITY</div>
+                            <div style="font-size: 7.5px; font-weight: 700; color: #e52e04; letter-spacing: 0.2px;">DISTRIBUTION CO.</div>
+                        </div>
+                    </div>
+                    <!-- Category Header Banner -->
+                    <div style="background: #e52e04; color: #ffffff; font-size: 9px; font-weight: 800; text-align: center; padding: 3px 0; text-transform: uppercase; letter-spacing: 1px;">CONTRACT STAFF</div>
+                    <!-- Photo Box -->
+                    <div style="margin: 10px auto 6px auto; width: 95px; height: 118px; border: 2px solid #0c1a40; border-radius: 6px; overflow: hidden; background: #f8fafc; display: flex; align-items: center; justify-content: center;">
+                        {photo_render}
+                    </div>
+                    <!-- Staff Details -->
+                    <div style="text-align: center; padding: 0 10px;">
+                        <div style="font-size: 11px; font-weight: 800; color: #0c1a40; margin-bottom: 2px; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{disp_name}</div>
+                        <div style="font-size: 9px; font-weight: 700; color: #e52e04; margin-bottom: 4px;">{disp_id}</div>
+                        <div style="font-size: 8.5px; font-weight: 600; color: #475569; margin-bottom: 1px;">Role: {disp_desig}</div>
+                        <div style="font-size: 8.5px; font-weight: 600; color: #475569; margin-bottom: 1px;">Dept: {disp_dept}</div>
+                        <div style="font-size: 8.5px; font-weight: 700; color: #0c1a40;">Region: {disp_reg}</div>
+                    </div>
+                    <!-- Bottom Decorative Footer Curves -->
+                    <div style="position: absolute; bottom: 0; left: 0; width: 85px; height: 38px; background: linear-gradient(135deg, #ff5522, #f03a17); border-top-right-radius: 38px; z-index: 1;"></div>
+                    <div style="position: absolute; bottom: 0; right: 0; width: 95px; height: 44px; background: #0c1a40; border-top-left-radius: 44px; z-index: 1;"></div>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div style="width: 240px; height: 380px; background: #ffffff; border-radius: 14px; border: 2px solid #0c1a40; box-shadow: 0 12px 30px rgba(0,0,0,0.12); overflow: hidden; margin: 0 auto; position: relative; font-family: 'Plus Jakarta Sans', Arial, sans-serif;">
+                    <!-- Header Logo & Title -->
+                    <div style="padding: 14px 14px 4px 14px; display: flex; align-items: center; gap: 8px;">
+                        <img src="{logo_b64}" style="height: 28px;">
+                        <div>
+                            <div style="font-size: 8.5px; font-weight: 800; color: #0c1a40; letter-spacing: 0.3px; line-height: 1.1;">YOLA ELECTRICITY</div>
+                            <div style="font-size: 7.5px; font-weight: 700; color: #ff6b00; letter-spacing: 0.2px;">DISTRIBUTION CO.</div>
+                        </div>
+                    </div>
+                    <!-- Category Header Banner -->
+                    <div style="background: #0c1a40; color: #ffffff; font-size: 9px; font-weight: 800; text-align: center; padding: 3px 0; text-transform: uppercase; letter-spacing: 1px;">{disp_cat} IDENTITY CARD</div>
+                    <!-- Photo Box -->
+                    <div style="margin: 10px auto 6px auto; width: 95px; height: 118px; border: 2px solid #ff6b00; border-radius: 6px; overflow: hidden; background: #f8fafc; display: flex; align-items: center; justify-content: center;">
+                        {photo_render}
+                    </div>
+                    <!-- Staff Details -->
+                    <div style="text-align: center; padding: 0 10px;">
+                        <div style="font-size: 11px; font-weight: 800; color: #0c1a40; margin-bottom: 2px; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{disp_name}</div>
+                        <div style="font-size: 9px; font-weight: 700; color: #ff6b00; margin-bottom: 4px;">{disp_id}</div>
+                        <div style="font-size: 8.5px; font-weight: 600; color: #475569; margin-bottom: 1px;">Role: {disp_desig}</div>
+                        <div style="font-size: 8.5px; font-weight: 600; color: #475569; margin-bottom: 1px;">Dept: {disp_dept}</div>
+                        <div style="font-size: 8.5px; font-weight: 700; color: #0c1a40;">Region: {disp_reg}</div>
+                    </div>
+                    <!-- Bottom Decorative Footer Curves -->
+                    <div style="position: absolute; bottom: 0; left: 0; width: 85px; height: 38px; background: linear-gradient(135deg, #ff6b00, #ea580c); border-top-right-radius: 38px; z-index: 1;"></div>
+                    <div style="position: absolute; bottom: 0; right: 0; width: 95px; height: 44px; background: #0c1a40; border-top-left-radius: 44px; z-index: 1;"></div>
+                </div>
+                """, unsafe_allow_html=True)
+
+        if submit_btn:
+            if category in ["Intern", "NYSC"]:
+                final_dept = "N/A"
+                final_desig = category
+            else:
+                final_dept = dept_input
+                final_desig = designation
+
+            if not emp_id:
+                st.error("Please enter Employee ID.")
+            elif not full_name:
+                st.error("Please enter Full Name.")
+            elif photo_file is None:
+                st.error("Please upload or capture photo.")
+            elif canvas_result is None or canvas_result.image_data is None:
+                st.error("Please sign on signature pad.")
+            else:
+                try:
+                    is_bg_valid, bg_msg = validate_white_background(photo_file)
+                    if not is_bg_valid:
+                        st.error(f"❌ Registration Rejected: {bg_msg}")
+                    else:
+                        processed_photo = process_and_optimize_photo(photo_file)
+
+                        photo_filename = f"{emp_id}_photo.jpg"
+                        photo_rel_path = f"photos/{photo_filename}"
+                        photo_abs_path = DIRS["photos"] / photo_filename
+                        processed_photo.save(photo_abs_path, format="JPEG", quality=99, optimize=True)
+
+                        sig_data = canvas_result.image_data.astype(np.uint8)
+                        sig_image = Image.fromarray(sig_data)
+
+                        # Composite signature RGBA onto solid white background to prevent transparent line cutouts
+                        if sig_image.mode == "RGBA":
+                            bg = Image.new("RGB", sig_image.size, (255, 255, 255))
+                            bg.paste(sig_image, mask=sig_image.split()[3])
+                            sig_image = bg
+                        elif sig_image.mode != "RGB":
+                            sig_image = sig_image.convert("RGB")
+
+                        sig_filename = f"{emp_id}_sig.png"
+                        sig_rel_path = f"signatures/{sig_filename}"
+                        sig_abs_path = DIRS["signatures"] / sig_filename
+                        sig_image.save(sig_abs_path, format="PNG")
+
+                        buf_photo = io.BytesIO()
+                        processed_photo.save(buf_photo, format="JPEG", quality=99)
+                        photo_b64_str = f"data:image/jpeg;base64,{base64.b64encode(buf_photo.getvalue()).decode()}"
+
+                        buf_sig = io.BytesIO()
+                        sig_image.save(buf_sig, format="PNG")
+                        sig_b64_str = f"data:image/png;base64,{base64.b64encode(buf_sig.getvalue()).decode()}"
+
+                        qr_rel_path = "NOT_REQUIRED"
+
+                        success, msg = insert_staff_record(
+                            emp_id=emp_id,
+                            full_name=full_name,
+                            category=category,
+                            designation=final_desig,
+                            department=final_dept,
+                            region=staff_region,
+                            photo_path=photo_rel_path,
+                            signature_path=sig_rel_path,
+                            qr_path=qr_rel_path
+                        )
+
+                        if success:
+                            # Pre-generate official A4 ID Card Request Form PDF immediately
+                            new_record = {
+                                "emp_id": emp_id,
+                                "full_name": full_name,
+                                "category": category,
+                                "designation": final_desig,
+                                "department": final_dept,
+                                "region": staff_region,
+                                "photo_path": photo_rel_path,
+                                "signature_path": sig_rel_path,
+                                "qr_path": qr_rel_path
+                            }
+                            generate_id_request_form_pdf(new_record)
+
+                            st.session_state.form_saved_success = True
+                            st.session_state.saved_emp_id = emp_id
+                            st.session_state.last_saved_record = {
+                                "emp_id": emp_id,
+                                "full_name": full_name,
+                                "category": category,
+                                "designation": final_desig,
+                                "department": final_dept,
+                                "region": staff_region,
+                                "photo_b64": photo_b64_str,
+                                "sig_b64": sig_b64_str
+                            }
+                            st.rerun()
+                        else:
+                            st.error(f"❌ {msg}")
+
+                except Exception as e:
+                    st.error(f"Error processing photo: {str(e)}")
+
+    with tab_bulk:
+        st.markdown("#### 📥 Bulk Staff Enrollment via CSV / Excel")
+        st.caption("Upload a spreadsheet containing staff records to batch import multiple employee profiles at once.")
+        
+        b_col1, b_col2 = st.columns([1, 1], gap="medium")
+        with b_col1:
+            st.markdown("##### 📄 Step 1: Download Sample CSV Template")
+            st.caption("Ensure your spreadsheet file matches the required column headers:")
+            st.download_button(
+                label="📥 Download Sample CSV Template",
+                data=generate_sample_csv_template(),
+                file_name="yedc_staff_import_template.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+            
+        with b_col2:
+            st.markdown("##### 📤 Step 2: Upload Completed Spreadsheet")
+            uploaded_bulk_file = st.file_uploader(
+                "Upload CSV or Excel file (.csv, .xlsx, .xls)",
+                type=["csv", "xlsx", "xls"],
+                key="bulk_staff_uploader"
+            )
+            
+        if uploaded_bulk_file is not None:
+            try:
+                if uploaded_bulk_file.name.endswith(".csv"):
+                    bulk_df = pd.read_csv(uploaded_bulk_file)
+                else:
+                    bulk_df = pd.read_excel(uploaded_bulk_file)
+                    
+                st.markdown("---")
+                st.markdown("##### 🔍 Pre-Import Validation & Audit Summary")
+                
+                valid_recs, validation_errors = validate_bulk_staff_df(bulk_df, user_region=user_region, user_role=user_role)
+                
+                v_m1, v_m2, v_m3 = st.columns(3)
+                with v_m1:
+                    st.metric("Total Rows in File", len(bulk_df))
+                with v_m2:
+                    st.metric("Ready to Import (Valid)", len(valid_recs))
+                with v_m3:
+                    st.metric("Errors Detected", len(validation_errors))
+                    
+                if validation_errors:
+                    st.error(f"⚠️ Found {len(validation_errors)} error(s) in uploaded file. Please review the details below:")
+                    st.dataframe(pd.DataFrame(validation_errors), use_container_width=True)
+                    
+                if valid_recs:
+                    st.success(f"✓ Found {len(valid_recs)} valid staff record(s) ready for database insertion.")
+                    st.markdown("###### Preview of Valid Records to Import:")
+                    st.dataframe(pd.DataFrame(valid_recs), use_container_width=True)
+                    
+                    if st.button(f"🚀 Import {len(valid_recs)} Valid Staff Record(s)", type="primary", use_container_width=True, key="btn_run_bulk_import"):
+                        with st.spinner("Processing bulk staff records & generating QR codes..."):
+                            s_cnt, f_cnt_err, err_list = process_bulk_staff_import(valid_recs)
+                        if s_cnt > 0:
+                            st.success(f"🎉 Successfully imported {s_cnt} staff record(s) with auto-generated QR codes!")
+                            if err_list:
+                                st.warning(f"⚠️ {f_cnt_err} record(s) failed insertion: " + ", ".join(err_list))
+                            st.balloons()
+                            st.rerun()
+                        else:
+                            st.error(f"❌ Bulk import failed: {', '.join(err_list)}")
+            except Exception as ex:
+                st.error(f"❌ Error reading file: {str(ex)}")
 
     if st.session_state.get("form_saved_success"):
         st.markdown("<br>", unsafe_allow_html=True)
@@ -1788,8 +2087,29 @@ elif selected_page == "🔍 Staff Directory" and user_role in ["super_admin", "r
                 st.error(f"Error generating PDF report: {r_path_or_err}")
 
     all_staff = fetch_all_records(region_filter=dir_region_filter)
+    pending_media_staff = [
+        s for s in all_staff 
+        if "placeholder.png" in s["photo_path"] or "placeholder.png" in s["signature_path"]
+    ]
 
-    # PROMINENT AUTO-OPENING EDIT FORM AT TOP OF DIRECTORY
+    # PROMINENT PENDING CAPTURE QUEUE BANNER
+    if pending_media_staff:
+        st.warning(f"⚠️ **{len(pending_media_staff)} Staff Member(s)** imported via CSV are currently awaiting Photo & Signature capture!")
+        p_col1, p_col2 = st.columns([2, 1])
+        with p_col1:
+            pending_select_id = st.selectbox(
+                "Select Pending Staff Member to Complete Enrollment:",
+                options=[s["emp_id"] for s in pending_media_staff],
+                format_func=lambda x: f"🪪 {x} - {next((s['full_name'] for s in pending_media_staff if s['emp_id']==x), '')} ({next((s['department'] for s in pending_media_staff if s['emp_id']==x), '')})",
+                key="pending_queue_selectbox"
+            )
+        with p_col2:
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button("📷 Capture Photo & Signature", type="primary", use_container_width=True, key="btn_open_pending_capture"):
+                st.session_state.editing_emp_id = pending_select_id
+                st.rerun()
+
+    # PROMINENT AUTO-OPENING EDIT & CAPTURE FORM AT TOP OF DIRECTORY
     editing_id = st.session_state.get("editing_emp_id")
     if editing_id:
         target_staff = next((s for s in all_staff if s["emp_id"] == editing_id), None)
@@ -1800,10 +2120,10 @@ elif selected_page == "🔍 Staff Directory" and user_role in ["super_admin", "r
             st.markdown('<div class="top-edit-form-card">', unsafe_allow_html=True)
             t_hdr1, t_hdr2 = st.columns([3, 1])
             with t_hdr1:
-                st.markdown(f"#### ✏️ Editing Staff Member: **{target_staff['emp_id']}**")
-                st.caption("Update staff details below (Employee ID & Digital Signature are locked). Click 'Save Changes' to update.")
+                st.markdown(f"#### 📷/✍️ Media Capture & Details Update: **{target_staff['emp_id']}**")
+                st.caption("Complete photo capture & digital signature for pre-imported CSV staff member. Click 'Save Changes' to finalize identity profile.")
             with t_hdr2:
-                if st.button("❌ Close Edit Form", key="btn_close_top_edit", use_container_width=True):
+                if st.button("❌ Close Capture Form", key="btn_close_top_edit", use_container_width=True):
                     st.session_state.editing_emp_id = None
                     st.rerun()
 
@@ -1840,13 +2160,26 @@ elif selected_page == "🔍 Staff Directory" and user_role in ["super_admin", "r
                     e_region = target_staff.get("region", user_region)
                     st.text_input("Assigned Region", value=e_region, disabled=True)
 
-                st.markdown("###### 📷 Update Staff Photo (Optional)")
-                st.caption("Leave empty to keep existing staff photo.")
-                new_photo = st.file_uploader("Upload New Photo (JPG/PNG/HEIC)", type=["jpg", "jpeg", "png", "heic", "heif"])
+                st.markdown("###### 📷 Staff Photo Capture (White Background Required)")
+                st.caption("Select photo file or capture via native camera window:")
+                new_photo = st.file_uploader("📷 Select / Capture Staff Photo (JPG/PNG/HEIC)", type=["jpg", "jpeg", "png", "heic", "heif"], key=f"edit_photo_upload_{target_staff['emp_id']}")
+
+                st.markdown("###### ✍️ Digital Signature Canvas")
+                st.caption("Draw staff signature inside the box below:")
+                edit_canvas_result = st_canvas(
+                    fill_color="rgba(255, 255, 255, 0)",
+                    stroke_width=2.5,
+                    stroke_color="#0F172A",
+                    background_color="#FFFFFF",
+                    height=130,
+                    width=330,
+                    drawing_mode="freedraw",
+                    key=f"edit_sig_canvas_{target_staff['emp_id']}"
+                )
 
                 eb_col1, eb_col2 = st.columns(2)
                 with eb_col1:
-                    e_save = st.form_submit_button("💾 Save Changes", type="primary", use_container_width=True)
+                    e_save = st.form_submit_button("💾 Save & Finalize Profile", type="primary", use_container_width=True)
                 with eb_col2:
                     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -1856,16 +2189,33 @@ elif selected_page == "🔍 Staff Directory" and user_role in ["super_admin", "r
                     else:
                         try:
                             updated_photo_rel = None
+                            updated_sig_rel = None
+                            
+                            safe_id = re.sub(r'[^a-zA-Z0-9_-]', '_', target_staff['emp_id'])
+                            
                             if new_photo is not None:
                                 is_bg_valid, bg_msg = validate_white_background(new_photo)
                                 if not is_bg_valid:
                                     st.error(f"❌ Photo Update Rejected: {bg_msg}")
                                     st.stop()
                                 opt_p = process_and_optimize_photo(new_photo)
-                                p_fname = f"{target_staff['emp_id']}_photo.jpg"
+                                p_fname = f"{safe_id}_photo.jpg"
                                 p_abs = DIRS["photos"] / p_fname
                                 opt_p.save(p_abs, format="JPEG", quality=95, optimize=True)
                                 updated_photo_rel = f"photos/{p_fname}"
+
+                            if edit_canvas_result is not None and edit_canvas_result.image_data is not None:
+                                sig_arr = edit_canvas_result.image_data.astype(np.uint8)
+                                if np.any(sig_arr[:, :, 3] > 0): # Check if signature canvas has drawn strokes
+                                    sig_img = Image.fromarray(sig_arr)
+                                    if sig_img.mode == "RGBA":
+                                        bg = Image.new("RGB", sig_img.size, (255, 255, 255))
+                                        bg.paste(sig_img, mask=sig_img.split()[3])
+                                        sig_img = bg
+                                    s_fname = f"{safe_id}_sig.png"
+                                    s_abs = DIRS["signatures"] / s_fname
+                                    sig_img.save(s_abs, format="PNG")
+                                    updated_sig_rel = f"signatures/{s_fname}"
 
                             if e_cat in ["Intern", "NYSC"]:
                                 final_edit_dept = "N/A"
@@ -1881,10 +2231,15 @@ elif selected_page == "🔍 Staff Directory" and user_role in ["super_admin", "r
                                 designation=final_edit_desig,
                                 department=final_edit_dept,
                                 region=e_region,
-                                photo_path=updated_photo_rel
+                                photo_path=updated_photo_rel,
+                                signature_path=updated_sig_rel
                             )
 
                             if ok:
+                                updated_full_record = fetch_all_records("ALL")
+                                match_r = next((r for r in updated_full_record if r["emp_id"] == target_staff["emp_id"]), None)
+                                if match_r:
+                                    generate_id_request_form_pdf(match_r)
                                 st.success(f"✅ {u_msg}")
                                 st.session_state.editing_emp_id = None
                                 st.rerun()
@@ -1973,135 +2328,191 @@ elif selected_page == "🔍 Staff Directory" and user_role in ["super_admin", "r
 elif selected_page == "📈 Reports & Analytics" and user_role in ["super_admin", "regional_admin"]:
     st.markdown("### Staff Category & Regional Reports")
 
-    if is_super_admin:
-        r_col1, r_col2 = st.columns([1, 2])
-        with r_col1:
-            rep_region_filter = st.selectbox(
-                "Filter Report by Region:",
-                ["ALL"] + REGIONS,
-                key="rep_region_select"
-            )
-    else:
-        rep_region_filter = user_region
-        st.info(f"Showing regional report for **{user_region}** Region.")
+    tab_analytics, tab_audit = st.tabs(["📊 Analytics Overview", "📜 Audit & Activity Logs"])
 
-    rep_records = fetch_all_records(region_filter=rep_region_filter)
-    total_staff = len(rep_records)
-
-    perm_count = sum(1 for r in rep_records if str(r.get("category", "")).strip().lower() == "permanent")
-    contract_count = sum(1 for r in rep_records if str(r.get("category", "")).strip().lower() == "contract")
-    intern_count = sum(1 for r in rep_records if str(r.get("category", "")).strip().lower() == "intern")
-    nysc_count = sum(1 for r in rep_records if str(r.get("category", "")).strip().lower() == "nysc")
-    ready_count = sum(1 for r in rep_records if r["qr_path"] != "PENDING")
-
-    nysc_card_html = f'<img src="{nysc_logo_b64}" class="nysc-icon-img"> NYSC MEMBERS' if nysc_logo_b64 else '🎖️ NYSC MEMBERS'
-
-    st.markdown("##### 📊 Staff Category Metric Cards")
-    m1, m2, m3, m4, m5 = st.columns(5)
-
-    with m1:
-        st.markdown(f"""
-        <div class="metric-card-box">
-            <div class="metric-num" style="color: #0f172a;">{total_staff}</div>
-            <div class="metric-lbl">TOTAL STAFF</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with m2:
-        st.markdown(f"""
-        <div class="metric-card-box">
-            <div class="metric-num" style="color: #ff6b00;">{perm_count}</div>
-            <div class="metric-lbl">PERMANENT STAFF</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with m3:
-        st.markdown(f"""
-        <div class="metric-card-box">
-            <div class="metric-num" style="color: #2563eb;">{contract_count}</div>
-            <div class="metric-lbl">CONTRACT STAFF</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with m4:
-        st.markdown(f"""
-        <div class="metric-card-box">
-            <div class="metric-num" style="color: #7c3aed;">{intern_count}</div>
-            <div class="metric-lbl">INTERN STAFF</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with m5:
-        st.markdown(f"""
-        <div class="metric-card-box">
-            <div class="metric-num" style="color: #059669;">{nysc_count}</div>
-            <div class="metric-lbl">{nysc_card_html}</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    st.markdown("##### 📈 Staff Category Breakdown")
-
-    if total_staff > 0:
-        c1, c2 = st.columns([1.2, 1])
-
-        with c1:
-            st.markdown("###### Staff Percentage Composition")
-            st.write(f"👔 **Permanent:** {perm_count} ({perm_count/total_staff*100:.1f}%)")
-            st.progress(perm_count / total_staff)
-
-            st.write(f"📄 **Contract:** {contract_count} ({contract_count/total_staff*100:.1f}%)")
-            st.progress(contract_count / total_staff)
-
-            st.write(f"🎓 **Intern:** {intern_count} ({intern_count/total_staff*100:.1f}%)")
-            st.progress(intern_count / total_staff)
-
-            nysc_lbl_html = f'<img src="{nysc_logo_b64}" style="height:18px;vertical-align:middle;"> <b>NYSC:</b>' if nysc_logo_b64 else '🎖️ <b>NYSC:</b>'
-            st.markdown(f"{nysc_lbl_html} {nysc_count} ({nysc_count/total_staff*100:.1f}%)", unsafe_allow_html=True)
-            st.progress(nysc_count / total_staff)
-
-        with c2:
-            st.markdown("###### Regional Summary & Export")
-            
-            df_rep = pd.DataFrame([
-                {"Category": "Permanent", "Count": perm_count, "Percentage": f"{perm_count/total_staff*100:.1f}%"},
-                {"Category": "Contract", "Count": contract_count, "Percentage": f"{contract_count/total_staff*100:.1f}%"},
-                {"Category": "Intern", "Count": intern_count, "Percentage": f"{intern_count/total_staff*100:.1f}%"},
-                {"Category": "NYSC", "Count": nysc_count, "Percentage": f"{nysc_count/total_staff*100:.1f}%"},
-                {"Category": "TOTAL", "Count": total_staff, "Percentage": "100.0%"}
-            ])
-            st.dataframe(df_rep, use_container_width=True)
-
-            ex_col1, ex_col2 = st.columns(2)
-            with ex_col1:
-                csv_data = df_rep.to_csv(index=False).encode('utf-8')
-                st.download_button(
-                    label="📥 Export CSV",
-                    data=csv_data,
-                    file_name=f"YEDC_Staff_Report_{rep_region_filter}.csv",
-                    mime="text/csv",
-                    type="primary",
-                    use_container_width=True
+    with tab_analytics:
+        if is_super_admin:
+            r_col1, r_col2 = st.columns([1, 2])
+            with r_col1:
+                rep_region_filter = st.selectbox(
+                    "Filter Report by Region:",
+                    ["ALL"] + REGIONS,
+                    key="rep_region_select"
                 )
-            with ex_col2:
-                # Dual-Engine PDF Master Report Export Button
-                ok_rep, pdf_rep_path = generate_staff_master_pdf_report(rep_records, region_filter=rep_region_filter)
-                if ok_rep and os.path.exists(pdf_rep_path):
-                    with open(pdf_rep_path, "rb") as f_pdf_rep:
-                        st.download_button(
-                            label="📄 Export PDF Report",
-                            data=f_pdf_rep,
-                            file_name=f"YEDC_Staff_Master_Report_{rep_region_filter}.pdf",
-                            mime="application/pdf",
-                            type="primary",
-                            use_container_width=True,
-                            key="btn_dl_pdf_rep_tab_direct"
-                        )
-                else:
-                    st.error(f"PDF Report Error: {pdf_rep_path}")
-    else:
-        st.info("No records available to generate report for this region scope.")
+        else:
+            rep_region_filter = user_region
+            st.info(f"Showing regional report for **{user_region}** Region.")
+
+        rep_records = fetch_all_records(region_filter=rep_region_filter)
+        total_staff = len(rep_records)
+
+        perm_count = sum(1 for r in rep_records if str(r.get("category", "")).strip().lower() == "permanent")
+        contract_count = sum(1 for r in rep_records if str(r.get("category", "")).strip().lower() == "contract")
+        intern_count = sum(1 for r in rep_records if str(r.get("category", "")).strip().lower() == "intern")
+        nysc_count = sum(1 for r in rep_records if str(r.get("category", "")).strip().lower() == "nysc")
+        ready_count = sum(1 for r in rep_records if r["qr_path"] != "PENDING")
+
+        nysc_card_html = f'<img src="{nysc_logo_b64}" class="nysc-icon-img"> NYSC MEMBERS' if nysc_logo_b64 else '🎖️ NYSC MEMBERS'
+
+        st.markdown("##### 📊 Staff Category Metric Cards")
+        m1, m2, m3, m4, m5 = st.columns(5)
+
+        with m1:
+            st.markdown(f"""
+            <div class="metric-card-box">
+                <div class="metric-num" style="color: #0f172a;">{total_staff}</div>
+                <div class="metric-lbl">TOTAL STAFF</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with m2:
+            st.markdown(f"""
+            <div class="metric-card-box">
+                <div class="metric-num" style="color: #ff6b00;">{perm_count}</div>
+                <div class="metric-lbl">PERMANENT STAFF</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with m3:
+            st.markdown(f"""
+            <div class="metric-card-box">
+                <div class="metric-num" style="color: #2563eb;">{contract_count}</div>
+                <div class="metric-lbl">CONTRACT STAFF</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with m4:
+            st.markdown(f"""
+            <div class="metric-card-box">
+                <div class="metric-num" style="color: #7c3aed;">{intern_count}</div>
+                <div class="metric-lbl">INTERN STAFF</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with m5:
+            st.markdown(f"""
+            <div class="metric-card-box">
+                <div class="metric-num" style="color: #059669;">{nysc_count}</div>
+                <div class="metric-lbl">{nysc_card_html}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        st.markdown("##### 📈 Staff Category Breakdown")
+
+        if total_staff > 0:
+            c1, c2 = st.columns([1.2, 1])
+
+            with c1:
+                st.markdown("###### Staff Percentage Composition")
+                st.write(f"👔 **Permanent:** {perm_count} ({perm_count/total_staff*100:.1f}%)")
+                st.progress(perm_count / total_staff)
+
+                st.write(f"📄 **Contract:** {contract_count} ({contract_count/total_staff*100:.1f}%)")
+                st.progress(contract_count / total_staff)
+
+                st.write(f"🎓 **Intern:** {intern_count} ({intern_count/total_staff*100:.1f}%)")
+                st.progress(intern_count / total_staff)
+
+                nysc_lbl_html = f'<img src="{nysc_logo_b64}" style="height:18px;vertical-align:middle;"> <b>NYSC:</b>' if nysc_logo_b64 else '🎖️ <b>NYSC:</b>'
+                st.markdown(f"{nysc_lbl_html} {nysc_count} ({nysc_count/total_staff*100:.1f}%)", unsafe_allow_html=True)
+                st.progress(nysc_count / total_staff)
+
+            with c2:
+                st.markdown("###### Regional Summary & Export")
+                
+                df_rep = pd.DataFrame([
+                    {"Category": "Permanent", "Count": perm_count, "Percentage": f"{perm_count/total_staff*100:.1f}%"},
+                    {"Category": "Contract", "Count": contract_count, "Percentage": f"{contract_count/total_staff*100:.1f}%"},
+                    {"Category": "Intern", "Count": intern_count, "Percentage": f"{intern_count/total_staff*100:.1f}%"},
+                    {"Category": "NYSC", "Count": nysc_count, "Percentage": f"{nysc_count/total_staff*100:.1f}%"},
+                    {"Category": "TOTAL", "Count": total_staff, "Percentage": "100.0%"}
+                ])
+                st.dataframe(df_rep, use_container_width=True)
+
+                ex_col1, ex_col2 = st.columns(2)
+                with ex_col1:
+                    csv_data = df_rep.to_csv(index=False).encode('utf-8')
+                    st.download_button(
+                        label="📥 Export CSV",
+                        data=csv_data,
+                        file_name=f"YEDC_Staff_Report_{rep_region_filter}.csv",
+                        mime="text/csv",
+                        type="primary",
+                        use_container_width=True
+                    )
+                with ex_col2:
+                    # Dual-Engine PDF Master Report Export Button
+                    ok_rep, pdf_rep_path = generate_staff_master_pdf_report(rep_records, region_filter=rep_region_filter)
+                    if ok_rep and os.path.exists(pdf_rep_path):
+                        with open(pdf_rep_path, "rb") as f_pdf_rep:
+                            st.download_button(
+                                label="📄 Export PDF Report",
+                                data=f_pdf_rep,
+                                file_name=f"YEDC_Staff_Master_Report_{rep_region_filter}.pdf",
+                                mime="application/pdf",
+                                type="primary",
+                                use_container_width=True,
+                                key="btn_dl_pdf_rep_tab_direct"
+                            )
+                    else:
+                        st.error(f"PDF Report Error: {pdf_rep_path}")
+        else:
+            st.info("No records available to generate report for this region scope.")
+
+    with tab_audit:
+        st.markdown("#### 📜 System Audit & Activity Logs")
+        st.caption("Complete timestamped history of staff registration, updates, deletions, PDF card exports, and user logins.")
+        
+        a_col1, a_col2 = st.columns([1, 1], gap="medium")
+        with a_col1:
+            action_filter_opt = st.selectbox(
+                "Filter Action Type:",
+                ["ALL", "CREATE_STAFF", "UPDATE_STAFF", "DELETE_STAFF", "BULK_IMPORT", "EXPORT_PDF_CARD", "EXPORT_REQUEST_FORM", "EXPORT_MASTER_REPORT", "EXPORT_BATCH_ZIP", "USER_LOGIN", "CREATE_USER", "DELETE_USER"],
+                key="audit_action_select"
+            )
+        with a_col2:
+            audit_region_opt = rep_region_filter if 'rep_region_filter' in locals() else (user_region if not is_super_admin else "ALL")
+            st.info(f"Audit log region scope: **{audit_region_opt}**")
+            
+        audit_records = fetch_audit_logs(region_filter=audit_region_opt, action_filter=action_filter_opt, limit=500)
+        
+        # Summary Audit Metrics
+        aud_m1, aud_m2, aud_m3, aud_m4 = st.columns(4)
+        with aud_m1:
+            st.metric("Total Audit Events", len(audit_records))
+        with aud_m2:
+            staff_ops = sum(1 for a in audit_records if a["action"] in ["CREATE_STAFF", "UPDATE_STAFF", "DELETE_STAFF", "BULK_IMPORT"])
+            st.metric("Staff Modifications", staff_ops)
+        with aud_m3:
+            pdf_ops = sum(1 for a in audit_records if "EXPORT" in a["action"])
+            st.metric("PDF / Report Exports", pdf_ops)
+        with aud_m4:
+            login_ops = sum(1 for a in audit_records if a["action"] == "USER_LOGIN")
+            st.metric("User Logins", login_ops)
+            
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        if audit_records:
+            df_audit = pd.DataFrame(audit_records)
+            df_audit_display = df_audit[["timestamp", "username", "role", "action", "target_id", "details", "region"]].copy()
+            df_audit_display.columns = ["Timestamp", "User", "Role", "Action Type", "Target ID", "Activity Details", "Region"]
+            
+            st.dataframe(df_audit_display, use_container_width=True)
+            
+            audit_csv = df_audit_display.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="📥 Export Audit Logs (CSV)",
+                data=audit_csv,
+                file_name=f"YEDC_Audit_Logs_{audit_region_opt}_{action_filter_opt}.csv",
+                mime="text/csv",
+                type="primary",
+                use_container_width=True,
+                key="btn_dl_audit_logs_csv"
+            )
+        else:
+            st.info("No audit logs matching the selected filter criteria.")
 
 
 # ==========================================
