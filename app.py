@@ -91,6 +91,8 @@ def init_db():
         cursor.execute("ALTER TABLE staff_records ADD COLUMN department TEXT DEFAULT 'Technical'")
     if "region" not in columns:
         cursor.execute("ALTER TABLE staff_records ADD COLUMN region TEXT DEFAULT 'Adamawa'")
+    if "media_status" not in columns:
+        cursor.execute("ALTER TABLE staff_records ADD COLUMN media_status TEXT DEFAULT 'COMPLETE'")
 
     # Update any legacy non-matching region names in DB to Adamawa
     cursor.execute("UPDATE staff_records SET region = 'Adamawa' WHERE region NOT IN ('Adamawa', 'Borno', 'Taraba', 'Yobe')")
@@ -268,16 +270,16 @@ def delete_user(username):
     log_audit_event("DELETE_USER", username, f"Deleted user account '{username}'")
 
 # Staff Database Functions (Region-scoped)
-def insert_staff_record(emp_id, full_name, category, designation, department, region, photo_path, signature_path, qr_path="PENDING"):
+def insert_staff_record(emp_id, full_name, category, designation, department, region, photo_path, signature_path, qr_path="PENDING", media_status="COMPLETE"):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
         cursor.execute("""
-            INSERT INTO staff_records (emp_id, full_name, category, designation, department, region, photo_path, signature_path, qr_path)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (emp_id, full_name, category, designation, department, region, str(photo_path), str(signature_path), str(qr_path)))
+            INSERT INTO staff_records (emp_id, full_name, category, designation, department, region, photo_path, signature_path, qr_path, media_status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (emp_id, full_name, category, designation, department, region, str(photo_path), str(signature_path), str(qr_path), str(media_status)))
         conn.commit()
-        log_audit_event("CREATE_STAFF", emp_id, f"Registered staff '{full_name}' ({emp_id}) - Category: {category}, Dept: {department}, Region: {region}", region=region)
+        log_audit_event("CREATE_STAFF", emp_id, f"Registered staff '{full_name}' ({emp_id}) - Category: {category}, Dept: {department}, Region: {region} (Media: {media_status})", region=region)
         return True, "Record saved successfully!"
     except sqlite3.IntegrityError:
         return False, f"Employee ID '{emp_id}' already exists in database!"
@@ -286,7 +288,7 @@ def insert_staff_record(emp_id, full_name, category, designation, department, re
     finally:
         conn.close()
 
-def update_staff_record(emp_id, full_name, category, designation, department, region, photo_path=None, signature_path=None):
+def update_staff_record(emp_id, full_name, category, designation, department, region, photo_path=None, signature_path=None, media_status=None):
     """Update existing staff details, photo, and digital signature."""
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -300,6 +302,16 @@ def update_staff_record(emp_id, full_name, category, designation, department, re
         if signature_path:
             query += ", signature_path = ?"
             params.append(str(signature_path))
+        if media_status:
+            query += ", media_status = ?"
+            params.append(str(media_status))
+        elif photo_path or signature_path:
+            cursor.execute("SELECT photo_path, signature_path FROM staff_records WHERE emp_id = ?", (emp_id,))
+            r = cursor.fetchone()
+            curr_p = photo_path or (r[0] if r else "")
+            curr_s = signature_path or (r[1] if r else "")
+            if "placeholder" not in str(curr_p) and "placeholder" not in str(curr_s):
+                query += ", media_status = 'COMPLETE'"
             
         query += " WHERE emp_id = ?"
         params.append(emp_id)
@@ -481,16 +493,8 @@ def process_bulk_staff_import(valid_records):
         department = rec["department"]
         region = rec["region"]
         
-        safe_id = re.sub(r'[^a-zA-Z0-9_-]', '_', emp_id)
-        photo_rel = f"photos/{safe_id}_photo.png"
-        sig_rel = f"signatures/{safe_id}_sig.png"
-        
-        dest_p = BASE_DIR / photo_rel
-        dest_s = BASE_DIR / sig_rel
-        if not dest_p.exists():
-            Image.open(placeholder_photo).save(dest_p)
-        if not dest_s.exists():
-            Image.open(placeholder_sig).save(dest_s)
+        photo_rel = "photos/placeholder.png"
+        sig_rel = "signatures/placeholder.png"
             
         qr_p = auto_generate_staff_qr(emp_id, full_name, category, region)
         
@@ -503,7 +507,8 @@ def process_bulk_staff_import(valid_records):
             region=region,
             photo_path=photo_rel,
             signature_path=sig_rel,
-            qr_path=qr_p
+            qr_path=qr_p,
+            media_status="PENDING_MEDIA"
         )
         if ok:
             success_count += 1
@@ -1441,6 +1446,10 @@ if is_super_admin:
 # Gather Statistics based on user region scope
 records_all = fetch_all_records(region_filter=user_region if not is_super_admin else st.session_state.admin_selected_region)
 records_ready = fetch_ready_records(region_filter=user_region if not is_super_admin else st.session_state.admin_selected_region)
+records_pending_media = [
+    r for r in records_all
+    if r.get("media_status") == "PENDING_MEDIA" or "placeholder.png" in r.get("photo_path", "") or "placeholder.png" in r.get("signature_path", "")
+]
 pending_qr_count = len(records_all) - len(records_ready)
 generated_pdfs_count = len(list(DIRS["generated_pdfs"].glob("*.pdf")))
 
@@ -1483,7 +1492,7 @@ if selected_page == "📊 Dashboard":
 
     st.markdown("### System Metric Overview")
     
-    m1, m2, m3 = st.columns(3)
+    m1, m2, m3, m4 = st.columns(4)
     
     with m1:
         st.markdown(f"""
@@ -1504,10 +1513,30 @@ if selected_page == "📊 Dashboard":
     with m3:
         st.markdown(f"""
         <div class="metric-card-box">
+            <div class="metric-num" style="color: #d97706;">{len(records_pending_media)}</div>
+            <div class="metric-lbl">AWAITING PHOTO / SIG</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with m4:
+        st.markdown(f"""
+        <div class="metric-card-box">
             <div class="metric-num" style="color: #059669;">{generated_pdfs_count}</div>
             <div class="metric-lbl">PDF CARDS GENERATED</div>
         </div>
         """, unsafe_allow_html=True)
+
+    if records_pending_media:
+        st.markdown("<br>", unsafe_allow_html=True)
+        d_col1, d_col2 = st.columns([3, 1])
+        with d_col1:
+            st.warning(f"⚠️ **{len(records_pending_media)} Staff Member(s)** imported via CSV are currently awaiting Photo & Signature capture!")
+        with d_col2:
+            st.markdown("<div style='height:4px;'></div>", unsafe_allow_html=True)
+            if st.button("📷 Open Pending Queue", type="primary", use_container_width=True, key="btn_dash_open_pending_queue"):
+                st.session_state.current_page = "🔍 Staff Directory"
+                st.session_state.dir_status_filter_select = "⚠️ Awaiting Photo & Signature (Pending Queue)"
+                st.rerun()
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("### Recent Registered Staff")
@@ -2093,7 +2122,7 @@ elif selected_page == "🔍 Staff Directory" and user_role in ["super_admin", "r
     all_staff = fetch_all_records(region_filter=dir_region_filter)
     pending_media_staff = [
         s for s in all_staff 
-        if "placeholder.png" in s["photo_path"] or "placeholder.png" in s["signature_path"]
+        if s.get("media_status") == "PENDING_MEDIA" or "placeholder.png" in s.get("photo_path", "") or "placeholder.png" in s.get("signature_path", "")
     ]
 
     # PROMINENT PENDING CAPTURE QUEUE BANNER
@@ -2259,19 +2288,49 @@ elif selected_page == "🔍 Staff Directory" and user_role in ["super_admin", "r
     if not all_staff:
         st.info(f"No staff records registered yet for '{dir_region_filter}' region scope.")
     else:
-        search_query = st.text_input("🔍 Search Staff by Name, Employee ID, or Department:", placeholder="e.g. YEDC-1045 or Technical").strip().lower()
+        sf_col1, sf_col2 = st.columns([2, 1])
+        with sf_col1:
+            search_query = st.text_input("🔍 Search Staff by Name, Employee ID, or Department:", placeholder="e.g. YEDC-1045 or Technical").strip().lower()
+        with sf_col2:
+            default_status_filter_idx = 0
+            if st.session_state.get("dir_status_filter_select") == "⚠️ Awaiting Photo & Signature (Pending Queue)":
+                default_status_filter_idx = 1
+            dir_status_filter = st.selectbox(
+                "Filter Profile Status:",
+                ["ALL", "⚠️ Awaiting Photo & Signature (Pending Queue)", "✅ Complete Profiles"],
+                index=default_status_filter_idx,
+                key="dir_status_filter_select"
+            )
 
-        filtered_staff = [
-            s for s in all_staff
-            if search_query in s["emp_id"].lower() or search_query in s["full_name"].lower() or search_query in s["category"].lower() or search_query in s.get("department", "").lower() or search_query in s.get("region", "").lower()
-        ]
+        filtered_staff = all_staff
+
+        if dir_status_filter == "⚠️ Awaiting Photo & Signature (Pending Queue)":
+            filtered_staff = [
+                s for s in filtered_staff 
+                if s.get("media_status") == "PENDING_MEDIA" or "placeholder.png" in s.get("photo_path", "") or "placeholder.png" in s.get("signature_path", "")
+            ]
+        elif dir_status_filter == "✅ Complete Profiles":
+            filtered_staff = [
+                s for s in filtered_staff 
+                if s.get("media_status") != "PENDING_MEDIA" and "placeholder.png" not in s.get("photo_path", "") and "placeholder.png" not in s.get("signature_path", "")
+            ]
+
+        if search_query:
+            filtered_staff = [
+                s for s in filtered_staff
+                if search_query in s["emp_id"].lower() or search_query in s["full_name"].lower() or search_query in s["category"].lower() or search_query in s.get("department", "").lower() or search_query in s.get("region", "").lower()
+            ]
 
         st.caption(f"Showing {len(filtered_staff)} of {len(all_staff)} record(s)")
 
         for staff in filtered_staff:
             display_dept_label = "N/A" if staff.get('category') in ['Intern', 'NYSC'] else staff.get('department', 'Technical')
             display_desig_label = staff.get('category') if staff.get('category') in ['Intern', 'NYSC'] else staff.get('designation', 'Staff Member')
-            with st.expander(f"🪪 **{staff['emp_id']}** - {staff['full_name']} (Role: {display_desig_label} | Dept: {display_dept_label} - {staff['category']} - {staff.get('region', 'Adamawa')})"):
+            
+            is_pending = staff.get("media_status") == "PENDING_MEDIA" or "placeholder.png" in staff.get("photo_path", "") or "placeholder.png" in staff.get("signature_path", "")
+            pending_tag = " [⚠️ AWAITING PHOTO & SIGNATURE]" if is_pending else ""
+
+            with st.expander(f"🪪 **{staff['emp_id']}** - {staff['full_name']}{pending_tag} (Role: {display_desig_label} | Dept: {display_dept_label} - {staff['category']} - {staff.get('region', 'Adamawa')})"):
                 c1, c2, c3 = st.columns([1.2, 1.2, 1.6])
 
                 photo_abs = BASE_DIR / staff["photo_path"]
@@ -2293,7 +2352,13 @@ elif selected_page == "🔍 Staff Directory" and user_role in ["super_admin", "r
 
                 with c3:
                     st.markdown("**Actions**")
-                    
+                    if is_pending:
+                        st.warning("⚠️ Photo/Signature Pending")
+                        if st.button("📷 Capture Photo & Signature", key=f"btn_cap_pending_{staff['emp_id']}", type="primary", use_container_width=True):
+                            st.session_state.editing_emp_id = staff["emp_id"]
+                            st.session_state.scroll_to_top = True
+                            st.rerun()
+
                     # 1. Download Official ID Card Request Form PDF (Fits 100% on 1 A4 Page)
                     ok_req, req_pdf_path = generate_id_request_form_pdf(staff)
                     clean_name = re.sub(r'[^a-zA-Z0-9_-]', '_', staff['full_name'])
@@ -2306,7 +2371,7 @@ elif selected_page == "🔍 Staff Directory" and user_role in ["super_admin", "r
                                 data=req_f,
                                 file_name=f"{clean_id}_{clean_name}_Request_Form.pdf",
                                 mime="application/pdf",
-                                type="primary",
+                                type="secondary" if is_pending else "primary",
                                 use_container_width=True,
                                 key=f"dl_req_form_{staff['emp_id']}"
                             )
