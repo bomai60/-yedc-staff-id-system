@@ -2187,15 +2187,18 @@ elif selected_page == "🔍 Staff Directory" and user_role in ["super_admin", "r
                 # ==========================================
                 # FAST MOBILE MEDIA CAPTURE VIEW (NO TEXT FIELD CLUTTER)
                 # ==========================================
-                st.markdown("###### 📷 1. Staff Photo Capture (White Background Required)")
-                cam_tab, file_tab = st.tabs(["📸 Snap with Mobile Camera", "📁 Choose Photo File"])
+                st.markdown("###### 📷 1. Staff Photo Capture (Device Camera Preview)")
+                st.markdown("""
+                <div style="background:#eff6ff; border:1.5px solid #3b82f6; border-radius:10px; padding:12px; font-size:13px; color:#1e40af; margin-bottom:12px;">
+                    📱 <b>Native Device Camera Preview Mode:</b> Tapping the uploader button below on your mobile device automatically launches your smartphone's <b>Native Camera App</b> (with full Flash, Autofocus, HDR, and Zoom controls).
+                </div>
+                """, unsafe_allow_html=True)
                 
-                with cam_tab:
-                    cam_photo = st.camera_input("Take Live Photo with Camera", key=f"cam_input_{target_staff['emp_id']}")
-                with file_tab:
-                    file_photo = st.file_uploader("Select Photo File (JPG/PNG/HEIC)", type=["jpg", "jpeg", "png", "heic", "heif"], key=f"file_input_{target_staff['emp_id']}")
-                    
-                selected_photo = cam_photo if cam_photo is not None else file_photo
+                selected_photo = st.file_uploader(
+                    "📸 Open Device Camera Preview / Select Staff Photo (JPG/PNG/HEIC)",
+                    type=["jpg", "jpeg", "png", "heic", "heif"],
+                    key=f"fast_device_photo_{target_staff['emp_id']}"
+                )
 
                 st.markdown("###### ✍️ 2. Touch Screen Digital Signature Pad")
                 st.caption("Draw staff signature inside the white box below:")
