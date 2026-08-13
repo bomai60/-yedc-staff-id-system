@@ -565,9 +565,18 @@ def validate_white_background(photo_input, min_rgb=200, max_diff=35, required_ra
         white_ratio = np.mean(white_pixels)
         
         if white_ratio >= required_ratio:
-            return True, "White background verified."
+            return True, f"White background verified ({white_ratio*100:.1f}% white detected)."
         else:
-            return False, f"Photo background is not white ({white_ratio*100:.1f}% white detected). Only photos with a plain white background are accepted."
+            avg_r = int(np.mean(r)) if len(r) > 0 else 0
+            avg_g = int(np.mean(g)) if len(g) > 0 else 0
+            avg_b = int(np.mean(b)) if len(b) > 0 else 0
+            
+            diagnostic_items = [
+                f"1. **Insufficient Background Whiteness**: Detected **{white_ratio*100:.1f}%** white area in top corner background patches (Minimum required: **{required_ratio*100:.0f}%**).",
+                f"2. **Measured Light Intensity**: Sampled corner RGB brightness level is **({avg_r}, {avg_g}, {avg_b})** — Minimum brightness required is **({min_rgb}, {min_rgb}, {min_rgb})**.",
+                "3. **Recommended Fix**: Stand the staff member directly in front of a well-lit, plain white wall or white backdrop before snapping the photo with your mobile camera."
+            ]
+            return False, "\n\n".join(diagnostic_items)
     except Exception as e:
         return False, f"Could not analyze image background: {str(e)}"
 
@@ -2140,10 +2149,13 @@ elif selected_page == "🔍 Staff Directory" and user_role in ["super_admin", "r
             st.markdown("<br>", unsafe_allow_html=True)
             if st.button("📷 Capture Photo & Signature", type="primary", use_container_width=True, key="btn_open_pending_capture"):
                 st.session_state.editing_emp_id = pending_select_id
+                st.session_state.active_form_mode = "capture"
                 st.rerun()
 
     # PROMINENT AUTO-OPENING EDIT & CAPTURE FORM AT TOP OF DIRECTORY
     editing_id = st.session_state.get("editing_emp_id")
+    active_mode = st.session_state.get("active_form_mode", "capture")
+
     if editing_id:
         target_staff = next((s for s in all_staff if s["emp_id"] == editing_id), None)
         if not target_staff:
@@ -2151,136 +2163,253 @@ elif selected_page == "🔍 Staff Directory" and user_role in ["super_admin", "r
 
         if target_staff:
             st.markdown('<div class="top-edit-form-card">', unsafe_allow_html=True)
+            
             t_hdr1, t_hdr2 = st.columns([3, 1])
             with t_hdr1:
-                st.markdown(f"#### 📷/✍️ Media Capture & Details Update: **{target_staff['emp_id']}**")
-                st.caption("Complete photo capture & digital signature for pre-imported CSV staff member. Click 'Save Changes' to finalize identity profile.")
+                if active_mode == "capture":
+                    st.markdown("#### 📱 Fast Mobile Photo & Signature Capture")
+                    st.markdown(f"""
+                    <div style="background:#0f172a; color:white; padding:12px 16px; border-radius:10px; border-left:5px solid #ff6b00; margin:10px 0;">
+                        <span style="font-size:16px; font-weight:700; color:#ff6b00;">🪪 {target_staff['full_name']}</span> &nbsp;|&nbsp; <code>{target_staff['emp_id']}</code><br>
+                        <span style="font-size:12px; color:#cbd5e1;">Role: <b>{target_staff.get('designation', 'Staff')}</b> | Dept: <b>{target_staff.get('department', 'Technical')}</b> | Region: <b>{target_staff.get('region', 'Adamawa')}</b> ({target_staff['category']})</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.markdown(f"#### ✏️ Full Details Edit & Media Update: **{target_staff['emp_id']}**")
+                    st.caption("Update staff text details, photo, or digital signature.")
+                    
             with t_hdr2:
-                if st.button("❌ Close Capture Form", key="btn_close_top_edit", use_container_width=True):
+                if st.button("❌ Close Form", key="btn_close_top_edit", use_container_width=True):
                     st.session_state.editing_emp_id = None
                     st.rerun()
 
-            with st.form(key=f"top_edit_form_{target_staff['emp_id']}"):
-                e_c1, e_c2 = st.columns(2)
-                with e_c1:
-                    # Employee ID strictly read-only
-                    st.text_input("Employee ID (Read-Only)", value=target_staff["emp_id"], disabled=True)
-                    e_name = st.text_input("Full Name *", value=target_staff["full_name"]).strip()
+            if active_mode == "capture":
+                # ==========================================
+                # FAST MOBILE MEDIA CAPTURE VIEW (NO TEXT FIELD CLUTTER)
+                # ==========================================
+                st.markdown("###### 📷 1. Staff Photo Capture (White Background Required)")
+                cam_tab, file_tab = st.tabs(["📸 Snap with Mobile Camera", "📁 Choose Photo File"])
+                
+                with cam_tab:
+                    cam_photo = st.camera_input("Take Live Photo with Camera", key=f"cam_input_{target_staff['emp_id']}")
+                with file_tab:
+                    file_photo = st.file_uploader("Select Photo File (JPG/PNG/HEIC)", type=["jpg", "jpeg", "png", "heic", "heif"], key=f"file_input_{target_staff['emp_id']}")
                     
-                    cat_list = ["Permanent", "Contract", "Intern", "NYSC"]
-                    cat_idx = cat_list.index(target_staff["category"]) if target_staff["category"] in cat_list else 0
-                    e_cat = st.selectbox("Staff Category *", cat_list, index=cat_idx)
-                with e_c2:
-                    if e_cat == "Intern":
-                        st.text_input("Role / Designation", value="Intern", disabled=True, key=f"edit_desig_dis_{target_staff['emp_id']}")
-                        st.text_input("Department", value="N/A", disabled=True, key=f"edit_dept_dis_{target_staff['emp_id']}")
-                        e_desig = "Intern"
-                        e_dept = "N/A"
-                    elif e_cat == "NYSC":
-                        st.text_input("Role / Designation", value="NYSC", disabled=True, key=f"edit_desig_dis_{target_staff['emp_id']}")
-                        st.text_input("Department", value="N/A", disabled=True, key=f"edit_dept_dis_{target_staff['emp_id']}")
-                        e_desig = "NYSC"
-                        e_dept = "N/A"
-                    else:
-                        e_desig = st.text_input("Role / Designation *", value=target_staff.get("designation", "Staff Member"), placeholder="e.g. Linesman").strip()
-                        dept_idx = DEPARTMENTS.index(target_staff.get("department", "Technical")) if target_staff.get("department", "Technical") in DEPARTMENTS else 0
-                        e_dept = st.selectbox("Department *", DEPARTMENTS, index=dept_idx)
+                selected_photo = cam_photo if cam_photo is not None else file_photo
 
-                if is_super_admin:
-                    reg_idx = REGIONS.index(target_staff.get("region", "Adamawa")) if target_staff.get("region", "Adamawa") in REGIONS else 0
-                    e_region = st.selectbox("Assigned Region *", REGIONS, index=reg_idx)
-                else:
-                    e_region = target_staff.get("region", user_region)
-                    st.text_input("Assigned Region", value=e_region, disabled=True)
-
-                st.markdown("###### 📷 Staff Photo Capture (White Background Required)")
-                st.caption("Select photo file or capture via native camera window:")
-                new_photo = st.file_uploader("📷 Select / Capture Staff Photo (JPG/PNG/HEIC)", type=["jpg", "jpeg", "png", "heic", "heif"], key=f"edit_photo_upload_{target_staff['emp_id']}")
-
-                st.markdown("###### ✍️ Digital Signature Canvas")
-                st.caption("Draw staff signature inside the box below:")
-                edit_canvas_result = st_canvas(
+                st.markdown("###### ✍️ 2. Touch Screen Digital Signature Pad")
+                st.caption("Draw staff signature inside the white box below:")
+                fast_canvas_result = st_canvas(
                     fill_color="rgba(255, 255, 255, 0)",
                     stroke_width=2.5,
                     stroke_color="#0F172A",
                     background_color="#FFFFFF",
-                    height=130,
+                    height=135,
                     width=330,
                     drawing_mode="freedraw",
-                    key=f"edit_sig_canvas_{target_staff['emp_id']}"
+                    key=f"fast_sig_canvas_{target_staff['emp_id']}"
                 )
 
-                eb_col1, eb_col2 = st.columns(2)
-                with eb_col1:
-                    e_save = st.form_submit_button("💾 Save & Finalize Profile", type="primary", use_container_width=True)
-                with eb_col2:
-                    st.markdown("<br>", unsafe_allow_html=True)
+                b_col1, b_col2 = st.columns([2, 1])
+                with b_col1:
+                    save_capture = st.button("💾 Save & Complete Capture", type="primary", use_container_width=True, key=f"btn_save_fast_capture_{target_staff['emp_id']}")
+                with b_col2:
+                    if st.button("✏️ Edit Text Details", use_container_width=True, key=f"btn_switch_edit_{target_staff['emp_id']}"):
+                        st.session_state.active_form_mode = "edit"
+                        st.rerun()
 
-                if e_save:
-                    if not e_name:
-                        st.error("Full Name cannot be empty.")
-                    else:
-                        try:
-                            updated_photo_rel = None
-                            updated_sig_rel = None
-                            
-                            safe_id = re.sub(r'[^a-zA-Z0-9_-]', '_', target_staff['emp_id'])
-                            
-                            if new_photo is not None:
-                                is_bg_valid, bg_msg = validate_white_background(new_photo)
-                                if not is_bg_valid:
-                                    st.error(f"❌ Photo Update Rejected: {bg_msg}")
-                                    st.stop()
-                                opt_p = process_and_optimize_photo(new_photo)
+                if save_capture:
+                    has_error = False
+                    updated_photo_rel = None
+                    updated_sig_rel = None
+                    safe_id = re.sub(r'[^a-zA-Z0-9_-]', '_', target_staff['emp_id'])
+
+                    # 1. Validate Photo
+                    if selected_photo is None and "placeholder.png" in target_staff["photo_path"]:
+                        st.error("⚠️ **Photo Missing**: Please snap a live photo using the camera tab or upload a photo file.")
+                        has_error = True
+                    elif selected_photo is not None:
+                        is_bg_valid, bg_msg = validate_white_background(selected_photo)
+                        if not is_bg_valid:
+                            st.error(f"### ❌ Photo Background Rejected\n\nPlease review the details below:\n\n{bg_msg}")
+                            st.info("💡 **Instructions**: The capture form remains open above. Adjust lighting or staff position against a white backdrop and snap the photo again.")
+                            has_error = True
+                        else:
+                            try:
+                                opt_p = process_and_optimize_photo(selected_photo)
                                 p_fname = f"{safe_id}_photo.jpg"
                                 p_abs = DIRS["photos"] / p_fname
                                 opt_p.save(p_abs, format="JPEG", quality=95, optimize=True)
                                 updated_photo_rel = f"photos/{p_fname}"
+                            except Exception as ex_p:
+                                st.error(f"❌ **Photo File Error**: Could not process image — {str(ex_p)}")
+                                has_error = True
 
-                            if edit_canvas_result is not None and edit_canvas_result.image_data is not None:
-                                sig_arr = edit_canvas_result.image_data.astype(np.uint8)
-                                if np.any(sig_arr[:, :, 3] > 0): # Check if signature canvas has drawn strokes
-                                    sig_img = Image.fromarray(sig_arr)
-                                    if sig_img.mode == "RGBA":
-                                        bg = Image.new("RGB", sig_img.size, (255, 255, 255))
-                                        bg.paste(sig_img, mask=sig_img.split()[3])
-                                        sig_img = bg
-                                    s_fname = f"{safe_id}_sig.png"
-                                    s_abs = DIRS["signatures"] / s_fname
-                                    sig_img.save(s_abs, format="PNG")
-                                    updated_sig_rel = f"signatures/{s_fname}"
+                    # 2. Validate Signature
+                    has_sig_stroke = False
+                    if fast_canvas_result is not None and fast_canvas_result.image_data is not None:
+                        sig_arr = fast_canvas_result.image_data.astype(np.uint8)
+                        if np.any(sig_arr[:, :, 3] > 0):
+                            has_sig_stroke = True
+                            try:
+                                sig_img = Image.fromarray(sig_arr)
+                                if sig_img.mode == "RGBA":
+                                    bg = Image.new("RGB", sig_img.size, (255, 255, 255))
+                                    bg.paste(sig_img, mask=sig_img.split()[3])
+                                    sig_img = bg
+                                s_fname = f"{safe_id}_sig.png"
+                                s_abs = DIRS["signatures"] / s_fname
+                                sig_img.save(s_abs, format="PNG")
+                                updated_sig_rel = f"signatures/{s_fname}"
+                            except Exception as ex_s:
+                                st.error(f"❌ **Signature File Error**: Could not process signature file — {str(ex_s)}")
+                                has_error = True
 
-                            if e_cat in ["Intern", "NYSC"]:
-                                final_edit_dept = "N/A"
-                                final_edit_desig = e_cat
-                            else:
-                                final_edit_dept = e_dept
-                                final_edit_desig = e_desig if e_desig else "Staff Member"
+                    if not has_sig_stroke and "placeholder.png" in target_staff["signature_path"]:
+                        st.error("⚠️ **Digital Signature Missing**: Please draw staff signature inside the white box above.")
+                        has_error = True
 
-                            ok, u_msg = update_staff_record(
-                                emp_id=target_staff["emp_id"],
-                                full_name=e_name,
-                                category=e_cat,
-                                designation=final_edit_desig,
-                                department=final_edit_dept,
-                                region=e_region,
-                                photo_path=updated_photo_rel,
-                                signature_path=updated_sig_rel
-                            )
+                    # 3. Finalize
+                    if not has_error:
+                        ok, u_msg = update_staff_record(
+                            emp_id=target_staff["emp_id"],
+                            full_name=target_staff["full_name"],
+                            category=target_staff["category"],
+                            designation=target_staff.get("designation", "Staff Member"),
+                            department=target_staff.get("department", "Technical"),
+                            region=target_staff.get("region", user_region),
+                            photo_path=updated_photo_rel,
+                            signature_path=updated_sig_rel,
+                            media_status="COMPLETE"
+                        )
+                        if ok:
+                            updated_full_record = fetch_all_records("ALL")
+                            match_r = next((r for r in updated_full_record if r["emp_id"] == target_staff["emp_id"]), None)
+                            if match_r:
+                                generate_id_request_form_pdf(match_r)
+                            st.success(f"🎉 Media enrollment complete for {target_staff['full_name']}!")
+                            st.session_state.editing_emp_id = None
+                            st.rerun()
+                        else:
+                            st.error(f"❌ **Database Update Failed**: {u_msg}")
 
-                            if ok:
-                                updated_full_record = fetch_all_records("ALL")
-                                match_r = next((r for r in updated_full_record if r["emp_id"] == target_staff["emp_id"]), None)
-                                if match_r:
-                                    generate_id_request_form_pdf(match_r)
-                                st.success(f"✅ {u_msg}")
-                                st.session_state.editing_emp_id = None
-                                st.rerun()
-                            else:
-                                st.error(f"❌ {u_msg}")
+            else:
+                # ==========================================
+                # FULL DETAILS EDIT VIEW (TEXT INPUT FIELDS)
+                # ==========================================
+                with st.form(key=f"top_edit_form_{target_staff['emp_id']}"):
+                    e_c1, e_c2 = st.columns(2)
+                    with e_c1:
+                        st.text_input("Employee ID (Read-Only)", value=target_staff["emp_id"], disabled=True)
+                        e_name = st.text_input("Full Name *", value=target_staff["full_name"]).strip()
+                        
+                        cat_list = ["Permanent", "Contract", "Intern", "NYSC"]
+                        cat_idx = cat_list.index(target_staff["category"]) if target_staff["category"] in cat_list else 0
+                        e_cat = st.selectbox("Staff Category *", cat_list, index=cat_idx)
+                    with e_c2:
+                        if e_cat == "Intern":
+                            st.text_input("Role / Designation", value="Intern", disabled=True, key=f"edit_desig_dis_{target_staff['emp_id']}")
+                            st.text_input("Department", value="N/A", disabled=True, key=f"edit_dept_dis_{target_staff['emp_id']}")
+                            e_desig = "Intern"
+                            e_dept = "N/A"
+                        elif e_cat == "NYSC":
+                            st.text_input("Role / Designation", value="NYSC", disabled=True, key=f"edit_desig_dis_{target_staff['emp_id']}")
+                            st.text_input("Department", value="N/A", disabled=True, key=f"edit_dept_dis_{target_staff['emp_id']}")
+                            e_desig = "NYSC"
+                            e_dept = "N/A"
+                        else:
+                            e_desig = st.text_input("Role / Designation *", value=target_staff.get("designation", "Staff Member"), placeholder="e.g. Linesman").strip()
+                            dept_idx = DEPARTMENTS.index(target_staff.get("department", "Technical")) if target_staff.get("department", "Technical") in DEPARTMENTS else 0
+                            e_dept = st.selectbox("Department *", DEPARTMENTS, index=dept_idx)
 
-                        except Exception as err:
-                            st.error(f"Error updating record: {str(err)}")
+                    if is_super_admin:
+                        reg_idx = REGIONS.index(target_staff.get("region", "Adamawa")) if target_staff.get("region", "Adamawa") in REGIONS else 0
+                        e_region = st.selectbox("Assigned Region *", REGIONS, index=reg_idx)
+                    else:
+                        e_region = target_staff.get("region", user_region)
+                        st.text_input("Assigned Region", value=e_region, disabled=True)
+
+                    st.markdown("###### 📷 Staff Photo Capture (White Background Required)")
+                    new_photo = st.file_uploader("📷 Select / Capture Staff Photo (JPG/PNG/HEIC)", type=["jpg", "jpeg", "png", "heic", "heif"], key=f"edit_photo_upload_{target_staff['emp_id']}")
+
+                    st.markdown("###### ✍️ Digital Signature Canvas")
+                    edit_canvas_result = st_canvas(
+                        fill_color="rgba(255, 255, 255, 0)",
+                        stroke_width=2.5,
+                        stroke_color="#0F172A",
+                        background_color="#FFFFFF",
+                        height=130,
+                        width=330,
+                        drawing_mode="freedraw",
+                        key=f"edit_sig_canvas_{target_staff['emp_id']}"
+                    )
+
+                    e_save = st.form_submit_button("💾 Save Profile Changes", type="primary", use_container_width=True)
+
+                    if e_save:
+                        if not e_name:
+                            st.error("Full Name cannot be empty.")
+                        else:
+                            try:
+                                updated_photo_rel = None
+                                updated_sig_rel = None
+                                safe_id = re.sub(r'[^a-zA-Z0-9_-]', '_', target_staff['emp_id'])
+                                
+                                if new_photo is not None:
+                                    is_bg_valid, bg_msg = validate_white_background(new_photo)
+                                    if not is_bg_valid:
+                                        st.error(f"❌ Photo Update Rejected:\n\n{bg_msg}")
+                                    else:
+                                        opt_p = process_and_optimize_photo(new_photo)
+                                        p_fname = f"{safe_id}_photo.jpg"
+                                        p_abs = DIRS["photos"] / p_fname
+                                        opt_p.save(p_abs, format="JPEG", quality=95, optimize=True)
+                                        updated_photo_rel = f"photos/{p_fname}"
+
+                                if edit_canvas_result is not None and edit_canvas_result.image_data is not None:
+                                    sig_arr = edit_canvas_result.image_data.astype(np.uint8)
+                                    if np.any(sig_arr[:, :, 3] > 0):
+                                        sig_img = Image.fromarray(sig_arr)
+                                        if sig_img.mode == "RGBA":
+                                            bg = Image.new("RGB", sig_img.size, (255, 255, 255))
+                                            bg.paste(sig_img, mask=sig_img.split()[3])
+                                            sig_img = bg
+                                        s_fname = f"{safe_id}_sig.png"
+                                        s_abs = DIRS["signatures"] / s_fname
+                                        sig_img.save(s_abs, format="PNG")
+                                        updated_sig_rel = f"signatures/{s_fname}"
+
+                                if e_cat in ["Intern", "NYSC"]:
+                                    final_edit_dept = "N/A"
+                                    final_edit_desig = e_cat
+                                else:
+                                    final_edit_dept = e_dept
+                                    final_edit_desig = e_desig if e_desig else "Staff Member"
+
+                                ok, u_msg = update_staff_record(
+                                    emp_id=target_staff["emp_id"],
+                                    full_name=e_name,
+                                    category=e_cat,
+                                    designation=final_edit_desig,
+                                    department=final_edit_dept,
+                                    region=e_region,
+                                    photo_path=updated_photo_rel,
+                                    signature_path=updated_sig_rel
+                                )
+
+                                if ok:
+                                    updated_full_record = fetch_all_records("ALL")
+                                    match_r = next((r for r in updated_full_record if r["emp_id"] == target_staff["emp_id"]), None)
+                                    if match_r:
+                                        generate_id_request_form_pdf(match_r)
+                                    st.success(f"✅ {u_msg}")
+                                    st.session_state.editing_emp_id = None
+                                    st.rerun()
+                                else:
+                                    st.error(f"❌ {u_msg}")
+
+                            except Exception as err:
+                                st.error(f"Error updating record: {str(err)}")
 
             st.markdown('</div>', unsafe_allow_html=True)
             st.divider()
@@ -2356,6 +2485,7 @@ elif selected_page == "🔍 Staff Directory" and user_role in ["super_admin", "r
                         st.warning("⚠️ Photo/Signature Pending")
                         if st.button("📷 Capture Photo & Signature", key=f"btn_cap_pending_{staff['emp_id']}", type="primary", use_container_width=True):
                             st.session_state.editing_emp_id = staff["emp_id"]
+                            st.session_state.active_form_mode = "capture"
                             st.session_state.scroll_to_top = True
                             st.rerun()
 
@@ -2379,6 +2509,7 @@ elif selected_page == "🔍 Staff Directory" and user_role in ["super_admin", "r
                     # 2. Edit Record Action
                     if st.button("✏️ Edit Record", key=f"btn_edit_{staff['emp_id']}", use_container_width=True):
                         st.session_state.editing_emp_id = staff["emp_id"]
+                        st.session_state.active_form_mode = "edit"
                         st.session_state.scroll_to_top = True
                         st.rerun()
 
