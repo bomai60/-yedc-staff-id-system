@@ -419,7 +419,7 @@ def validate_bulk_staff_df(df, user_region, user_role):
         if not emp_id or emp_id == "nan":
             row_errors.append("Employee ID is required")
         elif emp_id in existing_emp_ids:
-            row_errors.append(f"Employee ID '{emp_id}' already exists in database")
+            row_errors.append(f"Employee ID '{emp_id}' is already saved in database (Already Imported)")
         elif emp_id in seen_file_ids:
             row_errors.append(f"Duplicate Employee ID '{emp_id}' within file")
         else:
@@ -1826,6 +1826,10 @@ elif selected_page == "📝 Staff Register":
         st.markdown("#### 📥 Bulk Staff Enrollment via CSV / Excel")
         st.caption("Upload a spreadsheet containing staff records to batch import multiple employee profiles at once.")
         
+        if st.session_state.get("bulk_import_success_msg"):
+            st.success(st.session_state.pop("bulk_import_success_msg"))
+            st.info("💡 **Tip:** The imported staff records are now saved in the database! Go to **🔍 Staff Directory** to view them or use the **⚠️ Pending Photo & Signature Queue** banner to attach photos and signatures.")
+
         b_col1, b_col2 = st.columns([1, 1], gap="medium")
         with b_col1:
             st.markdown("##### 📄 Step 1: Download Sample CSV Template")
@@ -1879,7 +1883,7 @@ elif selected_page == "📝 Staff Register":
                         with st.spinner("Processing bulk staff records & generating QR codes..."):
                             s_cnt, f_cnt_err, err_list = process_bulk_staff_import(valid_recs)
                         if s_cnt > 0:
-                            st.success(f"🎉 Successfully imported {s_cnt} staff record(s) with auto-generated QR codes!")
+                            st.session_state.bulk_import_success_msg = f"🎉 Successfully imported {s_cnt} staff record(s) into the database with auto-generated QR codes!"
                             if err_list:
                                 st.warning(f"⚠️ {f_cnt_err} record(s) failed insertion: " + ", ".join(err_list))
                             st.balloons()
