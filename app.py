@@ -1921,6 +1921,7 @@ elif selected_page == "📝 Staff Register":
                         with st.spinner("Processing bulk staff records & generating QR codes..."):
                             s_cnt, f_cnt_err, err_list = process_bulk_staff_import(valid_recs)
                         if s_cnt > 0:
+                            st.session_state.current_page = "📝 Staff Register"
                             st.session_state.bulk_import_success_msg = f"🎉 Successfully imported {s_cnt} staff record(s) into the database with auto-generated QR codes!"
                             if err_list:
                                 st.warning(f"⚠️ {f_cnt_err} record(s) failed insertion: " + ", ".join(err_list))
@@ -2171,7 +2172,7 @@ elif selected_page == "🔍 Staff Directory" and user_role in ["super_admin", "r
                     st.markdown(f"""
                     <div style="background:#0f172a; color:white; padding:12px 16px; border-radius:10px; border-left:5px solid #ff6b00; margin:10px 0;">
                         <span style="font-size:16px; font-weight:700; color:#ff6b00;">🪪 {target_staff['full_name']}</span> &nbsp;|&nbsp; <code>{target_staff['emp_id']}</code><br>
-                        <span style="font-size:12px; color:#cbd5e1;">Role: <b>{target_staff.get('designation', 'Staff')}</b> | Dept: <b>{target_staff.get('department', 'Technical')}</b> | Region: <b>{target_staff.get('region', 'Adamawa')}</b> ({target_staff['category']})</span>
+                        <span style="font-size:12px; color:#cbd5e1;">Role: <b>{target_staff.get('designation', 'Staff')}</b> | Dept: <b>{target_staff.get('department', 'Technical')}</b> | Region: <b>{target_staff.get('region', 'Adamawa')}</b></span>
                     </div>
                     """, unsafe_allow_html=True)
                 else:
