@@ -184,10 +184,7 @@
     </div>
 
     <!-- Staff Details Form Fields -->
-    <div class="field-row">
-        <span class="field-label">STAFF CATEGORY:</span>
-        <span class="badge-cat">{{ category }}</span>
-    </div>
+
 
     <div class="field-row">
         <span class="field-label">STAFF FULL NAME:</span>
@@ -243,17 +240,6 @@
 
     <!-- Signatures -->
     <div class="signature-section">
-        <div class="field-row" style="margin-bottom: 12px;">
-            <span class="field-label" style="vertical-align: bottom;">STAFF SIGNATURE:</span>
-            <div class="sig-container">
-                {% if signature_path %}
-                <img src="{{ signature_path }}" class="sig-img" alt="Staff Signature">
-                {% else %}
-                <span style="color:#64748b; font-weight:normal;">............................................................</span>
-                {% endif %}
-            </div>
-        </div>
-
         <div class="field-row">
             <span class="field-label" style="vertical-align: bottom;">HR VERIFICATION:</span>
             <div class="sig-container">

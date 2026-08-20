@@ -1457,7 +1457,7 @@ records_all = fetch_all_records(region_filter=user_region if not is_super_admin 
 records_ready = fetch_ready_records(region_filter=user_region if not is_super_admin else st.session_state.admin_selected_region)
 records_pending_media = [
     r for r in records_all
-    if r.get("media_status") == "PENDING_MEDIA" or "placeholder.png" in r.get("photo_path", "") or "placeholder.png" in r.get("signature_path", "")
+    if r.get("media_status") == "PENDING_MEDIA" or "placeholder.png" in r.get("photo_path", "")
 ]
 pending_qr_count = len(records_all) - len(records_ready)
 generated_pdfs_count = len(list(DIRS["generated_pdfs"].glob("*.pdf")))
@@ -1523,7 +1523,7 @@ if selected_page == "📊 Dashboard":
         st.markdown(f"""
         <div class="metric-card-box">
             <div class="metric-num" style="color: #d97706;">{len(records_pending_media)}</div>
-            <div class="metric-lbl">AWAITING PHOTO / SIG</div>
+            <div class="metric-lbl">AWAITING PHOTO</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -1539,12 +1539,12 @@ if selected_page == "📊 Dashboard":
         st.markdown("<br>", unsafe_allow_html=True)
         d_col1, d_col2 = st.columns([3, 1])
         with d_col1:
-            st.warning(f"⚠️ **{len(records_pending_media)} Staff Member(s)** imported via CSV are currently awaiting Photo & Signature capture!")
+            st.warning(f"⚠️ **{len(records_pending_media)} Staff Member(s)** imported via CSV are currently awaiting Photo capture!")
         with d_col2:
             st.markdown("<div style='height:4px;'></div>", unsafe_allow_html=True)
             if st.button("📷 Open Pending Queue", type="primary", use_container_width=True, key="btn_dash_open_pending_queue"):
                 st.session_state.current_page = "🔍 Staff Directory"
-                st.session_state.dir_status_filter_select = "⚠️ Awaiting Photo & Signature (Pending Queue)"
+                st.session_state.dir_status_filter_select = "⚠️ Awaiting Photo (Pending Queue)"
                 st.rerun()
 
     st.markdown("<br>", unsafe_allow_html=True)
@@ -1633,20 +1633,6 @@ elif selected_page == "📝 Staff Register":
                         st.error(f"❌ Photo Rejected: {bg_msg}")
                     else:
                         st.caption(f"✓ Photo loaded ({photo_file.size / 1024:.1f} KB) - White Background Verified")
-
-                st.markdown("##### ✍️ Digital Signature Pad")
-                st.caption("Draw staff signature inside the canvas:")
-
-                canvas_result = st_canvas(
-                    fill_color="rgba(255, 255, 255, 0)",
-                    stroke_width=2.5,
-                    stroke_color="#0F172A",
-                    background_color="#FFFFFF",
-                    height=145,
-                    width=330,
-                    drawing_mode="freedraw",
-                    key=f"signature_canvas_{f_cnt}",
-                )
 
                 submit_btn = st.form_submit_button("💾 Save Staff Record", use_container_width=True)
 
@@ -1773,8 +1759,6 @@ elif selected_page == "📝 Staff Register":
                 st.error("Please enter Full Name.")
             elif photo_file is None:
                 st.error("Please upload or capture photo.")
-            elif canvas_result is None or canvas_result.image_data is None:
-                st.error("Please sign on signature pad.")
             else:
                 try:
                     is_bg_valid, bg_msg = validate_white_background(photo_file)
@@ -1788,29 +1772,12 @@ elif selected_page == "📝 Staff Register":
                         photo_abs_path = DIRS["photos"] / photo_filename
                         processed_photo.save(photo_abs_path, format="JPEG", quality=99, optimize=True)
 
-                        sig_data = canvas_result.image_data.astype(np.uint8)
-                        sig_image = Image.fromarray(sig_data)
-
-                        # Composite signature RGBA onto solid white background to prevent transparent line cutouts
-                        if sig_image.mode == "RGBA":
-                            bg = Image.new("RGB", sig_image.size, (255, 255, 255))
-                            bg.paste(sig_image, mask=sig_image.split()[3])
-                            sig_image = bg
-                        elif sig_image.mode != "RGB":
-                            sig_image = sig_image.convert("RGB")
-
-                        sig_filename = f"{emp_id}_sig.png"
-                        sig_rel_path = f"signatures/{sig_filename}"
-                        sig_abs_path = DIRS["signatures"] / sig_filename
-                        sig_image.save(sig_abs_path, format="PNG")
+                        sig_rel_path = "signatures/placeholder.png"
 
                         buf_photo = io.BytesIO()
                         processed_photo.save(buf_photo, format="JPEG", quality=99)
                         photo_b64_str = f"data:image/jpeg;base64,{base64.b64encode(buf_photo.getvalue()).decode()}"
-
-                        buf_sig = io.BytesIO()
-                        sig_image.save(buf_sig, format="PNG")
-                        sig_b64_str = f"data:image/png;base64,{base64.b64encode(buf_sig.getvalue()).decode()}"
+                        sig_b64_str = ""
 
                         qr_rel_path = "NOT_REQUIRED"
 
@@ -1866,7 +1833,7 @@ elif selected_page == "📝 Staff Register":
         
         if st.session_state.get("bulk_import_success_msg"):
             st.success(st.session_state.pop("bulk_import_success_msg"))
-            st.info("💡 **Tip:** The imported staff records are now saved in the database! Go to **🔍 Staff Directory** to view them or use the **⚠️ Pending Photo & Signature Queue** banner to attach photos and signatures.")
+            st.info("💡 **Tip:** The imported staff records are now saved in the database! Go to **🔍 Staff Directory** to view them or use the **⚠️ Pending Photo Queue** banner to attach photos.")
 
         b_col1, b_col2 = st.columns([1, 1], gap="medium")
         with b_col1:
@@ -2132,12 +2099,12 @@ elif selected_page == "🔍 Staff Directory" and user_role in ["super_admin", "r
     all_staff = fetch_all_records(region_filter=dir_region_filter)
     pending_media_staff = [
         s for s in all_staff 
-        if s.get("media_status") == "PENDING_MEDIA" or "placeholder.png" in s.get("photo_path", "") or "placeholder.png" in s.get("signature_path", "")
+        if s.get("media_status") == "PENDING_MEDIA" or "placeholder.png" in s.get("photo_path", "")
     ]
 
     # PROMINENT PENDING CAPTURE QUEUE BANNER
     if pending_media_staff:
-        st.warning(f"⚠️ **{len(pending_media_staff)} Staff Member(s)** imported via CSV are currently awaiting Photo & Signature capture!")
+        st.warning(f"⚠️ **{len(pending_media_staff)} Staff Member(s)** imported via CSV are currently awaiting Photo capture!")
         p_col1, p_col2 = st.columns([2, 1])
         with p_col1:
             pending_select_id = st.selectbox(
@@ -2148,7 +2115,7 @@ elif selected_page == "🔍 Staff Directory" and user_role in ["super_admin", "r
             )
         with p_col2:
             st.markdown("<br>", unsafe_allow_html=True)
-            if st.button("📷 Capture Photo & Signature", type="primary", use_container_width=True, key="btn_open_pending_capture"):
+            if st.button("📷 Capture Photo", type="primary", use_container_width=True, key="btn_open_pending_capture"):
                 st.session_state.editing_emp_id = pending_select_id
                 st.session_state.active_form_mode = "capture"
                 st.rerun()
@@ -2168,7 +2135,7 @@ elif selected_page == "🔍 Staff Directory" and user_role in ["super_admin", "r
             t_hdr1, t_hdr2 = st.columns([3, 1])
             with t_hdr1:
                 if active_mode == "capture":
-                    st.markdown("#### 📱 Fast Mobile Photo & Signature Capture")
+                    st.markdown("#### 📱 Fast Mobile Photo Capture")
                     st.markdown(f"""
                     <div style="background:#0f172a; color:white; padding:12px 16px; border-radius:10px; border-left:5px solid #ff6b00; margin:10px 0;">
                         <span style="font-size:16px; font-weight:700; color:#ff6b00;">🪪 {target_staff['full_name']}</span> &nbsp;|&nbsp; <code>{target_staff['emp_id']}</code><br>
@@ -2201,19 +2168,6 @@ elif selected_page == "🔍 Staff Directory" and user_role in ["super_admin", "r
                     key=f"fast_device_photo_{target_staff['emp_id']}"
                 )
 
-                st.markdown("###### ✍️ 2. Touch Screen Digital Signature Pad")
-                st.caption("Draw staff signature inside the white box below:")
-                fast_canvas_result = st_canvas(
-                    fill_color="rgba(255, 255, 255, 0)",
-                    stroke_width=2.5,
-                    stroke_color="#0F172A",
-                    background_color="#FFFFFF",
-                    height=135,
-                    width=330,
-                    drawing_mode="freedraw",
-                    key=f"fast_sig_canvas_{target_staff['emp_id']}"
-                )
-
                 b_col1, b_col2 = st.columns([2, 1])
                 with b_col1:
                     save_capture = st.button("💾 Save & Complete Capture", type="primary", use_container_width=True, key=f"btn_save_fast_capture_{target_staff['emp_id']}")
@@ -2225,7 +2179,7 @@ elif selected_page == "🔍 Staff Directory" and user_role in ["super_admin", "r
                 if save_capture:
                     has_error = False
                     updated_photo_rel = None
-                    updated_sig_rel = None
+                    updated_sig_rel = target_staff.get("signature_path", "signatures/placeholder.png")
                     safe_id = re.sub(r'[^a-zA-Z0-9_-]', '_', target_staff['emp_id'])
 
                     # 1. Validate Photo
@@ -2248,30 +2202,6 @@ elif selected_page == "🔍 Staff Directory" and user_role in ["super_admin", "r
                             except Exception as ex_p:
                                 st.error(f"❌ **Photo File Error**: Could not process image — {str(ex_p)}")
                                 has_error = True
-
-                    # 2. Validate Signature
-                    has_sig_stroke = False
-                    if fast_canvas_result is not None and fast_canvas_result.image_data is not None:
-                        sig_arr = fast_canvas_result.image_data.astype(np.uint8)
-                        if np.any(sig_arr[:, :, 3] > 0):
-                            has_sig_stroke = True
-                            try:
-                                sig_img = Image.fromarray(sig_arr)
-                                if sig_img.mode == "RGBA":
-                                    bg = Image.new("RGB", sig_img.size, (255, 255, 255))
-                                    bg.paste(sig_img, mask=sig_img.split()[3])
-                                    sig_img = bg
-                                s_fname = f"{safe_id}_sig.png"
-                                s_abs = DIRS["signatures"] / s_fname
-                                sig_img.save(s_abs, format="PNG")
-                                updated_sig_rel = f"signatures/{s_fname}"
-                            except Exception as ex_s:
-                                st.error(f"❌ **Signature File Error**: Could not process signature file — {str(ex_s)}")
-                                has_error = True
-
-                    if not has_sig_stroke and "placeholder.png" in target_staff["signature_path"]:
-                        st.error("⚠️ **Digital Signature Missing**: Please draw staff signature inside the white box above.")
-                        has_error = True
 
                     # 3. Finalize
                     if not has_error:
@@ -2336,18 +2266,6 @@ elif selected_page == "🔍 Staff Directory" and user_role in ["super_admin", "r
                     st.markdown("###### 📷 Staff Photo Capture (White Background Required)")
                     new_photo = st.file_uploader("📷 Select / Capture Staff Photo (JPG/PNG/HEIC)", type=["jpg", "jpeg", "png", "heic", "heif"], key=f"edit_photo_upload_{target_staff['emp_id']}")
 
-                    st.markdown("###### ✍️ Digital Signature Canvas")
-                    edit_canvas_result = st_canvas(
-                        fill_color="rgba(255, 255, 255, 0)",
-                        stroke_width=2.5,
-                        stroke_color="#0F172A",
-                        background_color="#FFFFFF",
-                        height=130,
-                        width=330,
-                        drawing_mode="freedraw",
-                        key=f"edit_sig_canvas_{target_staff['emp_id']}"
-                    )
-
                     e_save = st.form_submit_button("💾 Save Profile Changes", type="primary", use_container_width=True)
 
                     if e_save:
@@ -2369,19 +2287,6 @@ elif selected_page == "🔍 Staff Directory" and user_role in ["super_admin", "r
                                         p_abs = DIRS["photos"] / p_fname
                                         opt_p.save(p_abs, format="JPEG", quality=95, optimize=True)
                                         updated_photo_rel = f"photos/{p_fname}"
-
-                                if edit_canvas_result is not None and edit_canvas_result.image_data is not None:
-                                    sig_arr = edit_canvas_result.image_data.astype(np.uint8)
-                                    if np.any(sig_arr[:, :, 3] > 0):
-                                        sig_img = Image.fromarray(sig_arr)
-                                        if sig_img.mode == "RGBA":
-                                            bg = Image.new("RGB", sig_img.size, (255, 255, 255))
-                                            bg.paste(sig_img, mask=sig_img.split()[3])
-                                            sig_img = bg
-                                        s_fname = f"{safe_id}_sig.png"
-                                        s_abs = DIRS["signatures"] / s_fname
-                                        sig_img.save(s_abs, format="PNG")
-                                        updated_sig_rel = f"signatures/{s_fname}"
 
                                 if e_cat in ["Intern", "NYSC"]:
                                     final_edit_dept = "N/A"
